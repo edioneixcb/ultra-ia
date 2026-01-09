@@ -61,7 +61,19 @@ if [ -f "$CURSOR_MCP_CONFIG" ]; then
     echo -e "${YELLOW}📝 Atualizando configuração existente${NC}"
     
     # Usar Node.js para atualizar JSON (mais seguro)
-    node << EOF
+    # Tentar encontrar node no PATH ou usar nvm
+    NODE_CMD="node"
+    if ! command -v node &> /dev/null; then
+        if [ -f "$HOME/.nvm/nvm.sh" ]; then
+            source "$HOME/.nvm/nvm.sh"
+            nvm use 18.20.8 2>/dev/null || true
+        fi
+        if ! command -v node &> /dev/null; then
+            NODE_CMD="$HOME/.nvm/versions/node/v18.20.8/bin/node"
+        fi
+    fi
+    
+    $NODE_CMD << EOF
 const fs = require('fs');
 const path = require('path');
 
