@@ -1,174 +1,147 @@
 # Sistema Ultra - IA Offline para Geração de Código
 
-Sistema completo de geração de código usando IA offline (Ollama) com prevenção de alucinações, validação multi-camadas e refinamento iterativo.
+Sistema completo de geração de código usando IA offline, com integração nativa ao Cursor IDE via MCP (Model Context Protocol).
 
-## 🚀 Características
+## 🚀 Características Principais
 
-- **Geração de Código Inteligente**: Usa LLM local (Ollama) com RAG e prevenção de alucinações
-- **Validação Multi-Camadas**: Sintaxe, estrutura, segurança, boas práticas e testes
-- **Refinamento Automático**: Refina código iterativamente até funcionar
-- **Contexto Persistente**: Mantém contexto entre requisições
-- **Aprendizado Contínuo**: Aprende de sucessos e falhas
-- **API REST**: Interface HTTP completa
-- **Interface Web**: Interface gráfica para uso
+- ✅ **IA Offline Completa** - Funciona sem internet usando Ollama local
+- ✅ **Integração Cursor IDE** - Via MCP para uso direto no editor
+- ✅ **API REST Completa** - Interface web e API para integração
+- ✅ **Validação Multi-Camadas** - Sintaxe, estrutura, segurança, boas práticas
+- ✅ **Execução Isolada** - Docker sandbox para execução segura
+- ✅ **Knowledge Base Dinâmica** - Aprende com seu código
+- ✅ **Context Manager** - Mantém contexto entre sessões
+- ✅ **Prevenção de Alucinações** - RAG e validação cruzada multi-modelo
 
-## 📋 Pré-requisitos
+## 📁 Estrutura do Projeto
 
-- Node.js 18.x ou superior
-- Ollama instalado e rodando
-- Modelos Ollama instalados (deepseek-coder:6.7b recomendado)
+```
+sistema-ultra-ia/
+├── src/
+│   ├── api/              # API REST e interface web
+│   ├── components/       # Componentes principais
+│   ├── systems/          # Sistemas de integração
+│   ├── utils/            # Utilitários
+│   └── mcp/              # Servidor MCP para Cursor
+├── config/               # Configurações
+├── data/                 # Dados (Knowledge Base, Context)
+├── tests/                # Testes
+├── scripts/              # Scripts utilitários
+└── examples/             # Exemplos de uso
+```
 
 ## 🛠️ Instalação
 
 ```bash
 # Clonar repositório
-git clone <repo-url>
-cd sistema-ultra-ia
+git clone https://github.com/edioneixcb/ultra-ia.git
+cd ultra-ia
 
 # Instalar dependências
 npm install
 
-# Configurar Ollama (se necessário)
-# Certifique-se de que Ollama está rodando em http://localhost:11434
+# Configurar (editar config/config.json se necessário)
+cp config/config.json.example config/config.json
 ```
 
-## ⚙️ Configuração
-
-Edite `config/config.json` para configurar:
-
-```json
-{
-  "services": {
-    "ollama": {
-      "url": "http://localhost:11434",
-      "defaultModel": "deepseek-coder:6.7b"
-    }
-  },
-  "models": {
-    "primary": "deepseek-coder:6.7b",
-    "secondary": "llama3.1:8b"
-  }
-}
-```
-
-## 🎯 Uso
-
-### Uso Programático
-
-```javascript
-import ultraSystem from './src/index.js';
-
-const result = await ultraSystem.process(
-  'Criar uma função JavaScript para validar email',
-  {
-    sessionId: 'minha-sessao',
-    language: 'javascript'
-  }
-);
-
-if (result.success) {
-  console.log(result.result.code);
-}
-```
-
-### API REST
-
-```bash
-# Iniciar servidor
-npm run api
-
-# Gerar código via API
-curl -X POST http://localhost:3000/api/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "Criar função para validar email",
-    "language": "javascript"
-  }'
-```
+## 🚀 Uso
 
 ### Interface Web
 
 ```bash
-# Iniciar servidor
 npm run api
-
-# Acessar interface web
-# Abra http://localhost:3000 no navegador
+# Acesse http://localhost:3000
 ```
 
-### Exemplos
+### Cursor IDE (Recomendado)
+
+1. O servidor MCP já está configurado em `~/.cursor/mcp.json`
+2. Reinicie o Cursor
+3. Use comandos normais - o sistema detecta automaticamente
+
+### API REST
 
 ```bash
-# Exemplo básico
-npm run example:basic
-
-# Exemplo avançado
-npm run example:advanced
+# Gerar código
+curl -X POST http://localhost:3000/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Criar função para validar email", "language": "javascript"}'
 ```
 
 ## 📚 Documentação
 
-- [Documentação da API](./API_DOCUMENTATION.md)
-- [Exemplos de Uso](./examples/)
-- [Status da Implementação](./STATUS_IMPLEMENTACAO.md)
-
-## 🏗️ Arquitetura
-
-O sistema é composto por:
-
-### Fase 0: Fundação
-- ConfigLoader - Sistema de configuração
-- Logger - Logging estruturado
-- ErrorHandler - Tratamento de erros
-
-### Fase 1: Componentes Base
-- DynamicKnowledgeBase - Indexação e busca de código
-- PersistentContextManager - Gerenciamento de contexto
-- RequirementAnalyzer - Análise de requisitos
-
-### Fase 2: Geração
-- HallucinationPreventionGenerator - Geração com RAG
-- MultiLayerValidator - Validação multi-camadas
-- StructuredCodeGenerator - Geração estruturada
-
-### Fase 3: Integração
-- ExecutionFeedbackSystem - Execução e feedback
-- UltraSystem - Orquestrador principal
+- [GUIA_ACESSO_USUARIO.md](./GUIA_ACESSO_USUARIO.md) - Como acessar e usar
+- [COMO_USAR.md](./COMO_USAR.md) - Guia prático completo
+- [VALIDACAO_MCP.md](./VALIDACAO_MCP.md) - Validação do servidor MCP
+- [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) - Documentação da API
 
 ## 🧪 Testes
 
 ```bash
-# Testes unitários
+# Todos os testes
 npm test
 
 # Testes de integração
 npm run test:integration
+
+# Testar servidor MCP
+node scripts/test-mcp-server.js
 ```
 
-## 📊 Estatísticas
+## 🔧 Configuração
 
-- **Total de código**: ~5,400 linhas
-- **Componentes**: 11 componentes principais
-- **Testes**: Cobertura completa
-- **Linguagens suportadas**: JavaScript, Python, TypeScript
+Edite `config/config.json` para:
+- Configurar modelos Ollama
+- Ajustar timeouts
+- Configurar Docker
+- Definir paths
+- Configurar rate limiting
+- E mais...
+
+## 📦 Componentes Principais
+
+- **RequirementAnalyzer** - Analisa e valida requisitos
+- **DynamicKnowledgeBase** - Indexa e busca código
+- **PersistentContextManager** - Gerencia contexto hierárquico
+- **HallucinationPreventionGenerator** - Gera código com RAG
+- **MultiLayerValidator** - Valida em múltiplas camadas
+- **ExecutionFeedbackSystem** - Executa em sandbox Docker
+- **UltraSystem** - Orquestrador principal
+
+## 🔒 Segurança
+
+- Execução isolada em Docker
+- Validação de segurança antes de executar
+- Rate limiting na API
+- Autenticação via API Key (opcional)
+- Sanitização de entrada
+
+## 📊 Status
+
+✅ **Todas as funcionalidades implementadas e testadas**
+
+- ✅ Fase 1: Correções críticas (4/4)
+- ✅ Fase 2: Robustez (4/4)
+- ✅ Fase 3: Segurança (4/4)
+- ✅ Fase 4: Performance (4/4)
+- ✅ Integração MCP (8 ferramentas)
+- ✅ API REST completa
+- ✅ Interface web
 
 ## 🤝 Contribuindo
 
-1. Fork o projeto
-2. Crie uma branch para sua feature
-3. Commit suas mudanças
-4. Push para a branch
-5. Abra um Pull Request
+Este é um projeto pessoal, mas sugestões são bem-vindas!
 
-## 📝 Licença
+## 📄 Licença
 
-MIT License
+MIT
 
 ## 🙏 Agradecimentos
 
-- Ollama por fornecer LLM local
+- Ollama - Modelos LLM locais
+- Cursor IDE - Suporte a MCP
 - Comunidade open source
 
 ---
 
-**Desenvolvido com ❤️ usando IA Offline**
+**Desenvolvido com ❤️ para desenvolvimento offline produtivo**
