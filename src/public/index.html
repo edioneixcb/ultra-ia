@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Ultra - IA Offline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 120px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result.success {
+            border-left-color: #4caf50;
+        }
+
+        .result.error {
+            border-left-color: #f44336;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .two-columns {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Sistema Ultra</h1>
+            <p>IA Offline para Geração de Código</p>
+        </div>
+
+        <div class="card">
+            <h2>Gerar Código</h2>
+            <form id="generateForm">
+                <div class="form-group">
+                    <label for="prompt">Prompt:</label>
+                    <textarea id="prompt" name="prompt" placeholder="Ex: Criar uma função para validar email em JavaScript" required></textarea>
+                </div>
+
+                <div class="two-columns">
+                    <div class="form-group">
+                        <label for="language">Linguagem:</label>
+                        <select id="language" name="language">
+                            <option value="javascript">JavaScript</option>
+                            <option value="python">Python</option>
+                            <option value="typescript">TypeScript</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sessionId">ID da Sessão:</label>
+                        <input type="text" id="sessionId" name="sessionId" value="default" placeholder="default">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="expectedOutput">Output Esperado (opcional):</label>
+                    <input type="text" id="expectedOutput" name="expectedOutput" placeholder="Ex: true">
+                </div>
+
+                <button type="submit" class="btn" id="generateBtn">Gerar Código</button>
+            </form>
+
+            <div id="result"></div>
+        </div>
+
+        <div class="card">
+            <h2>Estatísticas do Sistema</h2>
+            <div class="stats" id="stats">
+                <div class="stat-card">
+                    <div class="stat-value">-</div>
+                    <div class="stat-label">Funções Indexadas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">-</div>
+                    <div class="stat-label">Classes Indexadas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">-</div>
+                    <div class="stat-label">Taxa de Sucesso</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">-</div>
+                    <div class="stat-label">Execuções Totais</div>
+                </div>
+            </div>
+            <button class="btn" onclick="loadStats()" style="margin-top: 20px;">Atualizar Estatísticas</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        // Carregar estatísticas ao carregar página
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+        });
+
+        // Formulário de geração
+        document.getElementById('generateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                prompt: document.getElementById('prompt').value,
+                language: document.getElementById('language').value,
+                sessionId: document.getElementById('sessionId').value || 'default',
+                expectedOutput: document.getElementById('expectedOutput').value || null
+            };
+
+            const btn = document.getElementById('generateBtn');
+            const resultDiv = document.getElementById('result');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Gerando...';
+            resultDiv.innerHTML = '<div class="result"><p>Processando requisição...</p></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.result) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h3>✅ Código Gerado com Sucesso</h3>
+                            <p><strong>Linguagem:</strong> ${data.result.language}</p>
+                            <p><strong>Iterações:</strong> ${data.iterations}</p>
+                            <p><strong>Duração:</strong> ${(data.duration / 1000).toFixed(2)}s</p>
+                            <p><strong>Score de Validação:</strong> ${data.result.validation.score}/100</p>
+                            ${data.result.execution.stdout ? `<p><strong>Output:</strong> ${data.result.execution.stdout}</p>` : ''}
+                            <div class="code-block">${escapeHtml(data.result.code)}</div>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h3>❌ Erro ao Gerar Código</h3>
+                            <p>${data.error?.message || 'Erro desconhecido'}</p>
+                            ${data.error?.suggestions ? `<p><strong>Sugestões:</strong> ${data.error.suggestions.join(', ')}</p>` : ''}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ Erro na Requisição</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Gerar Código';
+                loadStats();
+            }
+        });
+
+        // Carregar estatísticas
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/stats`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const stats = data.stats;
+                    document.getElementById('stats').innerHTML = `
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.knowledgeBase.functions}</div>
+                            <div class="stat-label">Funções Indexadas</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.knowledgeBase.classes}</div>
+                            <div class="stat-label">Classes Indexadas</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.execution.successRate.toFixed(1)}%</div>
+                            <div class="stat-label">Taxa de Sucesso</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.execution.total}</div>
+                            <div class="stat-label">Execuções Totais</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+            }
+        }
+
+        // Escapar HTML para segurança
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

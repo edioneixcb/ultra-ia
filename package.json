@@ -1,0 +1,40 @@
+{
+  "name": "sistema-ultra-ia",
+  "version": "1.0.0",
+  "description": "Sistema Ultra de IA Offline Genérico",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "vitest",
+    "test:integration": "vitest tests/integration",
+    "start": "node src/index.js",
+    "api": "node src/api/server.js",
+    "example:basic": "node examples/basic-usage.js",
+    "example:advanced": "node examples/advanced-usage.js"
+  },
+  "keywords": [
+    "ai",
+    "offline",
+    "code-generation",
+    "llm",
+    "ollama"
+  ],
+  "author": "AI Assistant",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "axios": "^1.6.0",
+    "better-sqlite3": "^9.2.2",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dockerode": "^4.0.0",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "glob": "^10.3.10",
+    "lru-cache": "^10.2.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "vitest": "^1.6.0"
+  }
+}

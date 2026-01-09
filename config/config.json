@@ -1,0 +1,94 @@
+{
+  "environment": "development",
+  "port": 3000,
+  "paths": {
+    "home": "$HOME",
+    "systemRoot": "$HOME/sistema-ultra-ia",
+    "knowledgeBase": "$HOME/sistema-ultra-ia/data/knowledge-base",
+    "context": "$HOME/sistema-ultra-ia/data/context",
+    "logs": "$HOME/sistema-ultra-ia/logs",
+    "sandbox": "$HOME/sistema-ultra-ia/sandbox"
+  },
+  "services": {
+    "ollama": {
+      "url": "http://localhost:11434",
+      "defaultModel": "deepseek-coder:6.7b",
+      "timeout": 30000
+    },
+    "docker": {
+      "enabled": true,
+      "timeout": 5000
+    }
+  },
+  "execution": {
+    "timeout": 10000,
+    "maxMemory": "100MB",
+    "docker": {
+      "enabled": true,
+      "image": "node:18-alpine",
+      "memoryLimit": "512m",
+      "cpuLimit": "0.5",
+      "networkDisabled": true,
+      "readOnlyRootfs": true
+    }
+  },
+  "models": {
+    "primary": "deepseek-coder:6.7b",
+    "secondary": "llama3.1:8b"
+  },
+  "validation": {
+    "maxIterations": 10,
+    "timeout": 5000
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "rotation": {
+      "enabled": true,
+      "maxSize": "10MB",
+      "maxFiles": 10
+    }
+  },
+  "errorHandling": {
+    "retry": {
+      "enabled": true,
+      "maxRetries": 3,
+      "backoffMultiplier": 2,
+      "initialDelay": 1000
+    },
+    "notifications": {
+      "enabled": false,
+      "criticalOnly": true
+    }
+  },
+  "timeouts": {
+    "ollama": 30000,
+    "knowledgeBase": 5000,
+    "context": 3000,
+    "database": 5000,
+    "default": 10000
+  },
+  "api": {
+    "rateLimit": {
+      "windowMs": 60000,
+      "max": 100,
+      "perSession": 10
+    },
+    "validation": {
+      "maxPromptSize": 10240,
+      "maxIterations": 50
+    },
+    "auth": {
+      "enabled": false,
+      "apiKey": null
+    }
+  },
+  "cache": {
+    "enabled": true,
+    "ttl": 3600000,
+    "maxSize": 100
+  },
+  "database": {
+    "maxConnections": 10
+  }
+}
