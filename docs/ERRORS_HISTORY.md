@@ -449,8 +449,8 @@ Configuração não foi atualizada após mudança de localização do projeto. O
 
 ## 🔗 REFERÊNCIAS
 
-- **Auditoria Completa:** `AUDITORIA_COMPLETA_REQUISITOS.md`
-- **Relatório de Revisão Fase 0:** `RELATORIO_REVISAO_FASE0.md`
+- **Auditoria Completa:** [AUDITORIA_COMPLETA_REQUISITOS.md](./AUDITORIA_COMPLETA_REQUISITOS.md)
+- **Relatório de Revisão Fase 0:** [relatorios/RELATORIO_REVISAO_FASE0.md](./relatorios/RELATORIO_REVISAO_FASE0.md)
 - **Commit de Correção:** `067507f fix: Corrigir script de atualização MCP para funcionar sem Node no PATH`
 
 ---

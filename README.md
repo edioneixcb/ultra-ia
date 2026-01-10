@@ -70,10 +70,10 @@ curl -X POST http://localhost:3000/api/generate \
 
 ## 📚 Documentação
 
-- [GUIA_ACESSO_USUARIO.md](./GUIA_ACESSO_USUARIO.md) - Como acessar e usar
 - [COMO_USAR.md](./COMO_USAR.md) - Guia prático completo
-- [VALIDACAO_MCP.md](./VALIDACAO_MCP.md) - Validação do servidor MCP
 - [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) - Documentação da API
+- [docs/guias/GUIA_ACESSO_USUARIO.md](./docs/guias/GUIA_ACESSO_USUARIO.md) - Como acessar e usar
+- [docs/validacoes/VALIDACAO_MCP.md](./docs/validacoes/VALIDACAO_MCP.md) - Validação do servidor MCP
 
 ## 🧪 Testes
 

@@ -67,10 +67,10 @@
 ### Documentação Principal (6/6) ✅
 - ✅ README.md
 - ✅ COMO_USAR.md
-- ✅ GUIA_ACESSO_USUARIO.md
-- ✅ GUIA_ATUALIZACAO_CURSOR.md
+- ✅ [GUIA_ACESSO_USUARIO.md](../guias/GUIA_ACESSO_USUARIO.md)
+- ✅ [GUIA_ATUALIZACAO_CURSOR.md](../guias/GUIA_ATUALIZACAO_CURSOR.md)
 - ✅ INFO_PROJETO.md
-- ✅ RESUMO_ATUALIZACAO_CURSOR.md
+- ✅ [RESUMO_ATUALIZACAO_CURSOR.md](../status/RESUMO_ATUALIZACAO_CURSOR.md)
 
 ### Dependências (8/8) ✅
 - ✅ @modelcontextprotocol/sdk

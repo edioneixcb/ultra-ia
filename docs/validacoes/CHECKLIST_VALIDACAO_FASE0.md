@@ -68,7 +68,7 @@
 - [x] Comentários explicativos
 - [x] README atualizado
 - [x] STATUS_IMPLEMENTACAO.md atualizado
-- [x] FASE0_COMPLETA.md criado
+- [x] [FASE0_COMPLETA.md](../fases/FASE0_COMPLETA.md) criado
 
 ### QUALIDADE DE CÓDIGO
 - [x] Sem TODOs críticos

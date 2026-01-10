@@ -90,5 +90,24 @@
   },
   "database": {
     "maxConnections": 10
+  },
+  "browser": {
+    "enabled": true,
+    "headless": false,
+    "timeout": 30000,
+    "screenshotOnError": true,
+    "library": "puppeteer"
+  },
+  "emulators": {
+    "android": {
+      "enabled": true,
+      "adbPath": "/usr/bin/adb",
+      "autoDetect": true
+    },
+    "ios": {
+      "enabled": false,
+      "simctlPath": "/usr/bin/xcrun",
+      "autoDetect": true
+    }
   }
 }

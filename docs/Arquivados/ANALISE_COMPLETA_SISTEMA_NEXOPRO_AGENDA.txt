@@ -1,0 +1,1967 @@
+================================================================================
+          ANÁLISE COMPLETA DO SISTEMA NEXOPRO - DOCUMENTO TÉCNICO AVANÇADO
+================================================================================
+                    Data de Análise: Julho 2025
+                    Versão do Documento: 2.0
+                    Tipo: Investigação de Nível Avançado
+                    Escopo: Análise Arquitetural Completa + Respostas Detalhadas
+================================================================================
+
+================================================================================
+                              ÍNDICE DETALHADO
+================================================================================
+
+SEÇÃO 1: RESUMO EXECUTIVO E MÉTRICAS DO SISTEMA
+SEÇÃO 2: PARTE 1 - ARQUITETURA E ESTRUTURA (Perguntas 1-10)
+SEÇÃO 3: PARTE 2 - BANCO DE DADOS E DADOS (Perguntas 11-20)
+SEÇÃO 4: PARTE 3 - MOBILE / REACT NATIVE (Perguntas 21-30)
+SEÇÃO 5: PARTE 4 - INTELIGÊNCIA ARTIFICIAL E AGENTES (Perguntas 31-40)
+SEÇÃO 6: PARTE 5 - DEVOPS E INFRAESTRUTURA (Perguntas 41-50)
+SEÇÃO 7: PARTE 6 - FERRAMENTAS E INTERFACE (Perguntas 51-60)
+SEÇÃO 8: PARTE 7 - NEGÓCIO E CONTEXTO (Perguntas 61-70)
+SEÇÃO 9: ANÁLISE DE SEGURANÇA AVANÇADA
+SEÇÃO 10: DÉBITO TÉCNICO E VULNERABILIDADES
+SEÇÃO 11: ROADMAP DE EVOLUÇÃO
+SEÇÃO 12: ANEXOS TÉCNICOS
+
+================================================================================
+                    SEÇÃO 1: RESUMO EXECUTIVO E MÉTRICAS
+================================================================================
+
+O NexoPro é uma plataforma de comunicação empresarial segura desenvolvida como
+um mensageiro corporativo com criptografia end-to-end.
+
+MÉTRICAS QUANTITATIVAS DO CÓDIGO:
+--------------------------------------------------------------------------------
+| Métrica                          | Valor                                     |
+|----------------------------------|-------------------------------------------|
+| Total de arquivos TypeScript     | 358 arquivos (.ts/.tsx)                   |
+| Total de arquivos JavaScript     | 101 arquivos (.js)                        |
+| Linhas de código backend         | ~4.482 linhas (JavaScript)                |
+| Total de tabelas PostgreSQL      | 22 tabelas                                |
+| Total de migrations              | 19 migrations                             |
+| Endpoints REST API               | ~45+ endpoints                            |
+| Componentes React Native         | ~60+ componentes                          |
+| Pacotes npm (backend)            | ~35 dependências                          |
+| Pacotes npm (mobile)             | ~50 dependências                          |
+| Versão do sistema                | 2.0.0 (Outubro 2025)                      |
+--------------------------------------------------------------------------------
+
+STACK TECNOLÓGICO COMPLETO:
+--------------------------------------------------------------------------------
+| Camada          | Tecnologia Principal    | Versão    | Observações          |
+|-----------------|-------------------------|-----------|----------------------|
+| Backend Runtime | Node.js                 | 18+       | ES6+ JavaScript      |
+| Backend Framework| Express.js             | 4.21.2    | REST API             |
+| Database        | PostgreSQL              | 12.22     | VPS externa          |
+| Mobile Framework| React Native            | 0.74.5    | Hermes JS engine     |
+| Mobile Platform | Expo SDK                | 51.0.14   | Managed Workflow     |
+| Admin Frontend  | React                   | 18.3.1    | SPA                  |
+| Admin Bundler   | Vite                    | 5.1.4     | HMR + Build          |
+| Real-time       | WebSocket (ws)          | 8.17.1    | Nativo               |
+| AI Service      | Google Gemini           | 2.5-flash | @google/genai        |
+| Push Service    | Expo Push               | 3.10.0    | expo-server-sdk      |
+| State Mobile    | Zustand                 | 4.5.2     | TypeScript-first     |
+| CSS Framework   | Tailwind CSS            | 3.4.1     | Admin only           |
+| Validation      | Zod                     | 3.23.8    | Schema validation    |
+| Monitoring      | Sentry                  | 8.15.0    | Error + APM          |
+--------------------------------------------------------------------------------
+
+================================================================================
+           SEÇÃO 2: PARTE 1 - ARQUITETURA E ESTRUTURA (Perguntas 1-10)
+================================================================================
+
+--------------------------------------------------------------------------------
+PERGUNTA 1: Os sistemas são Monólitos ou Microsserviços?
+--------------------------------------------------------------------------------
+
+RESPOSTA: MONOREPO COM ARQUITETURA MODULAR (Híbrido)
+
+EVIDÊNCIAS DO CÓDIGO:
+Package.json raiz (/app/package.json) define workspaces:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  "workspaces": [                                                            │
+│    "admin",           // Painel administrativo web                          │
+│    "packages/common", // Código TypeScript compartilhado                    │
+│    "backend",         // Servidor Node.js                                   │
+│    "nexopro-mobile"   // Aplicativo React Native                            │
+│  ]                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+CARACTERÍSTICAS IDENTIFICADAS:
+1. NÃO É MONÓLITO TRADICIONAL porque:
+   - Frontends são deployados separadamente
+   - Código compartilhado via pacote npm interno (@nexopro/common)
+   - Builds independentes por workspace
+
+2. NÃO É MICROSSERVIÇOS porque:
+   - Um único servidor backend serve todas as funcionalidades
+   - Não há comunicação inter-serviços (HTTP/gRPC/eventos)
+   - Banco de dados único compartilhado
+
+3. É MONOREPO MODULAR porque:
+   - Yarn Workspaces para gestão de dependências
+   - Versionamento unificado
+   - CI/CD compartilhado
+   - Tipos TypeScript compartilhados
+
+ESTRUTURA DE PASTAS VERIFICADA:
+/app
+├── admin/                     # React + Vite (TypeScript)
+│   ├── src/
+│   │   ├── components/
+│   │   ├── contexts/
+│   │   ├── lib/
+│   │   └── pages/
+│   └── vite.config.ts
+├── backend/                   # Node.js + Express (JavaScript)
+│   ├── config/
+│   ├── db/
+│   ├── errors/
+│   ├── interfaces/
+│   ├── lib/
+│   ├── middleware/
+│   ├── models/
+│   ├── routes/
+│   ├── schemas/
+│   ├── services/
+│   └── server.js
+├── nexopro-mobile/            # React Native + Expo (TypeScript)
+│   ├── src/
+│   │   ├── components/
+│   │   ├── contexts/
+│   │   ├── lib/
+│   │   ├── navigation/
+│   │   ├── screens/
+│   │   ├── store/
+│   │   └── theme/
+│   └── app.json
+└── packages/
+    └── common/                # Pacote compartilhado (TypeScript)
+        └── src/
+            ├── api.ts
+            ├── types.ts
+            └── contexts/
+
+CONCLUSÃO: Arquitetura MONOREPO com Yarn Workspaces, permitindo desenvolvimento
+unificado mas deploy independente por workspace.
+
+--------------------------------------------------------------------------------
+PERGUNTA 2: Você utiliza Clean Architecture ou outra estrutura específica?
+--------------------------------------------------------------------------------
+
+RESPOSTA: ESTRUTURA FEATURE-BASED COM ELEMENTOS DE CLEAN ARCHITECTURE
+
+EVIDÊNCIAS - Backend segue padrões identificados:
+
+1. DEPENDENCY INJECTION (DI):
+   Arquivo: /app/backend/config/services.config.js
+   ┌───────────────────────────────────────────────────────────────────────┐
+   │  const container = require('../lib/diContainer');                      │
+   │  container.singleton('aiService', () =>                                │
+   │      require('../services/GoogleAIService'));                          │
+   │  container.singleton('pushService', () =>                              │
+   │      require('../services/ExpoPushService'));                          │
+   │  container.singleton('authService', () =>                              │
+   │      require('../services/JWTAuthService'));                           │
+   │  container.singleton('db', () =>                                       │
+   │      require('../services/PostgresService'));                          │
+   └───────────────────────────────────────────────────────────────────────┘
+
+2. INTERFACE SEGREGATION (ISP - SOLID):
+   Pasta: /app/backend/interfaces/
+   - IAIService.js      → Contrato para serviços de IA
+   - IAuthService.js    → Contrato para autenticação
+   - IDatabaseService.js → Contrato para banco de dados
+   - IPushService.js    → Contrato para notificações
+
+3. REPOSITORY PATTERN (Parcial):
+   Pasta: /app/backend/models/
+   - user.js        (~220 linhas) → Encapsula queries de usuário
+   - message.js     (~270 linhas) → Encapsula queries de mensagem
+   - conversation.js (~250 linhas) → Encapsula queries de conversa
+   - session.js     (~56 linhas)  → Gerenciamento de sessões
+
+4. ERROR HANDLING POR DOMÍNIO:
+   Pasta: /app/backend/errors/
+   - AIServiceError.js
+   - AuthServiceError.js
+   - DatabaseError.js
+   - PushServiceError.js
+
+5. SCHEMA VALIDATION (Zod):
+   Pasta: /app/backend/schemas/
+   - index.js → Schemas de validação centralizados
+   - user.js  → Schemas específicos de usuário
+
+MOBILE segue:
+- Feature-based organization (screens/, components/, contexts/)
+- State management com Zustand (store/)
+- Separation of concerns (lib/, theme/, navigation/)
+
+CONCLUSÃO: NÃO é Clean Architecture pura, mas uma estrutura Feature-Based
+com elementos de Clean Architecture (DI, ISP, Repository Pattern).
+
+--------------------------------------------------------------------------------
+PERGUNTA 3: Como os sistemas se comunicam?
+--------------------------------------------------------------------------------
+
+RESPOSTA: APIs REST + WebSocket (Protocolo híbrido)
+
+COMUNICAÇÃO REST API:
+Arquivo: /app/backend/server.js
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ENDPOINTS IDENTIFICADOS (~45+ rotas):                                      │
+│                                                                             │
+│  /api/health          → Health check do sistema                             │
+│  /api/auth/*          → Autenticação (login, register, refresh, logout)     │
+│  /api/conversations/* → CRUD de conversas                                   │
+│  /api/messages/*      → CRUD de mensagens                                   │
+│  /api/admin/*         → Operações administrativas                           │
+│  /api/ai/*            → Integração com Gemini AI                            │
+│  /api/gdpr/*          → Compliance LGPD (export, delete)                    │
+│  /api/notifications/* → Push notifications                                  │
+│  /api/uploads/*       → Upload de arquivos (multer)                         │
+│  /api/search/*        → Busca global                                        │
+│  /api/tasks/*         → Gerenciamento de tarefas                            │
+│  /api/profile/*       → Perfil do usuário                                   │
+│  /api/maps/*          → Proxy para Google Maps                              │
+│  /api/crypto/*        → Chaves públicas E2E                                 │
+│  /api/logs/*          → System logs                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+COMUNICAÇÃO WEBSOCKET:
+Arquivo: /app/backend/lib/websocketServer.js
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Biblioteca: ws (nativo, não Socket.IO)                                     │
+│  Porta: Mesma do HTTP (8001)                                                │
+│  Autenticação: JWT na primeira mensagem                                     │
+│  Heartbeat: Ping/Pong a cada 30 segundos                                    │
+│  Max Payload: 10MB (configurado após correção)                              │
+│                                                                             │
+│  TIPOS DE MENSAGENS WebSocket:                                              │
+│  • auth                → Autenticação inicial                               │
+│  • send_message        → Envio de nova mensagem                             │
+│  • new_message         → Broadcast de nova mensagem                         │
+│  • typing              → Status de digitação                                │
+│  • typing_status       → Broadcast de status de digitação                   │
+│  • user_status_change  → Online/offline/away                                │
+│  • message_updated     → Edição de mensagem                                 │
+│  • message_deleted     → Deleção de mensagem                                │
+│  • reaction_update     → Reações em mensagens                               │
+│  • poll_update         → Votos em enquetes                                  │
+│  • conversation_update → Atualizações de conversa                           │
+│                                                                             │
+│  PROTEÇÕES IMPLEMENTADAS:                                                   │
+│  • Rate limiting: 10 mensagens/segundo por usuário                          │
+│  • Bloqueio temporário por spam: 1 minuto                                   │
+│  • Fila de processamento por conversa (previne race conditions)             │
+│  • Cleanup periódico de Maps (previne memory leaks)                         │
+│  • Exponential backoff para reconexão no cliente                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+CONCLUSÃO: Comunicação REST para operações CRUD e WebSocket para real-time.
+
+--------------------------------------------------------------------------------
+PERGUNTA 4: Existe algum sistema legado que precisa ser integrado?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - packages/web-legacy (em processo de descontinuação)
+
+EVIDÊNCIAS:
+- Diretório /app/packages/web-legacy/ existe
+- Referenciado em docs/ROADMAP.md como "aplicação web anterior"
+- CHANGELOG.md menciona "Fase 2: Remediação de Segurança Legada (Concluído)"
+
+STATUS: O sistema legado está em processo de descontinuação. O novo admin panel
+(/app/admin/) foi construído para substituí-lo completamente.
+
+AÇÃO REQUERIDA: Nenhuma integração ativa necessária. Sistema em sunset.
+
+--------------------------------------------------------------------------------
+PERGUNTA 5: Qual a versão do Python que você costuma usar?
+--------------------------------------------------------------------------------
+
+RESPOSTA: O PROJETO NÃO UTILIZA PYTHON
+
+EVIDÊNCIAS:
+- Nenhum arquivo .py no projeto
+- Nenhum requirements.txt para Python
+- Backend é 100% Node.js/JavaScript
+- Sem virtualenv, conda, ou poetry
+
+STACK REAL:
+- Backend: Node.js 18+ com JavaScript ES6+
+- Mobile: TypeScript 5.3.3
+- Admin: TypeScript (herda do root)
+- Common: TypeScript 5.3.3
+
+--------------------------------------------------------------------------------
+PERGUNTA 6: No React Native, você usa Expo ou React Native CLI?
+--------------------------------------------------------------------------------
+
+RESPOSTA: EXPO (SDK 51) - MANAGED WORKFLOW
+
+EVIDÊNCIAS:
+Arquivo: /app/nexopro-mobile/app.json
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  {                                                                          │
+│    "expo": {                                                                │
+│      "sdkVersion": "51.0.0",                                                │
+│      "name": "NexoPro Mobile",                                              │
+│      "slug": "nexopro",                                                     │
+│      "version": "1.0.0",                                                    │
+│      "jsEngine": "hermes",                                                  │
+│      "plugins": [                                                           │
+│        ["expo-notifications", {...}]                                        │
+│      ],                                                                     │
+│      "ios": {                                                               │
+│        "bundleIdentifier": "com.nexopro.mobile"                             │
+│      },                                                                     │
+│      "android": {                                                           │
+│        "package": "com.nexopro.mobile",                                     │
+│        "googleServicesFile": "./google-services.json"                       │
+│      },                                                                     │
+│      "extra": {                                                             │
+│        "eas": { "projectId": "c11c86a0-c87a-496e-a8e6-e20469416332" }        │
+│      }                                                                      │
+│    }                                                                        │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Arquivo: /app/nexopro-mobile/package.json
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  "expo": "51.0.14"                                                          │
+│  "expo-dev-client": "4.0.18"                                                │
+│  "react-native": "0.74.5"                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+PACOTES EXPO UTILIZADOS (26 pacotes):
+- expo-av (14.0.5)                → Áudio e vídeo
+- expo-blur (13.0.3)              → Efeitos de blur
+- expo-clipboard (6.0.3)          → Área de transferência
+- expo-constants (16.0.2)         → Constantes do app
+- expo-crypto (13.0.2)            → Funções criptográficas
+- expo-device (6.0.2)             → Info do dispositivo
+- expo-document-picker (12.0.2)   → Seleção de documentos
+- expo-file-system (17.0.1)       → Sistema de arquivos
+- expo-haptics (13.0.1)           → Feedback háptico
+- expo-image-picker (15.1.0)      → Câmera e galeria
+- expo-local-authentication (14.0.1) → Biometria
+- expo-localization (~15.0.1)     → i18n
+- expo-location (17.0.1)          → GPS e localização
+- expo-media-library (~16.0.3)    → Biblioteca de mídia
+- expo-notifications (0.28.9)     → Push notifications
+- expo-screen-capture (7.0.0)     → Proteção de captura de tela
+- expo-secure-store (13.0.1)      → Armazenamento seguro
+- expo-sharing (~12.0.1)          → Compartilhamento
+- expo-status-bar (1.12.1)        → Barra de status
+- expo-splash-screen             → Tela de splash
+
+CONCLUSÃO: Expo SDK 51 com Managed Workflow, usando Hermes JS engine.
+
+--------------------------------------------------------------------------------
+PERGUNTA 7: Você usa TypeScript em todos os projetos frontend?
+--------------------------------------------------------------------------------
+
+RESPOSTA: MISTO (TypeScript no frontend, JavaScript no backend)
+
+EVIDÊNCIAS DETALHADAS:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Projeto            │ Linguagem      │ Versão TS    │ Arquivos             │
+│─────────────────────┼────────────────┼──────────────┼──────────────────────│
+│  nexopro-mobile     │ TypeScript     │ ^5.3.3       │ 200+ arquivos        │
+│  admin              │ TypeScript     │ (herda root) │ 80+ arquivos         │
+│  packages/common    │ TypeScript     │ ^5.3.3       │ 15+ arquivos         │
+│  backend            │ JavaScript     │ N/A          │ 101 arquivos         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+CONFIGURAÇÃO TypeScript:
+Arquivo: /app/tsconfig.base.json
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  {                                                                          │
+│    "compilerOptions": {                                                     │
+│      "target": "ESNext",                                                    │
+│      "module": "ESNext",                                                    │
+│      "moduleResolution": "bundler",                                         │
+│      "strict": true,                                                        │
+│      "esModuleInterop": true,                                               │
+│      "skipLibCheck": true,                                                  │
+│      "declaration": true,                                                   │
+│      "declarationMap": true,                                                │
+│      "sourceMap": true                                                      │
+│    }                                                                        │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+NOTA: Existe arquivo TYPESCRIPT_DEBT.md documentando ~25 erros TypeScript
+pendentes e dívida técnica de tipagem no backend.
+
+--------------------------------------------------------------------------------
+PERGUNTA 8: Qual gerenciador de pacotes você prefere: npm, yarn ou pnpm?
+--------------------------------------------------------------------------------
+
+RESPOSTA: YARN (v1.22.x) COM WORKSPACES
+
+EVIDÊNCIAS:
+- Arquivo yarn.lock presente em /app/yarn.lock
+- Workspaces configurados em package.json raiz
+- Scripts usam yarn (não npm ou pnpm)
+
+CONFIGURAÇÃO:
+Arquivo: /app/package.json
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  "workspaces": [                                                            │
+│    "admin",                                                                 │
+│    "packages/common",                                                       │
+│    "backend",                                                               │
+│    "nexopro-mobile"                                                         │
+│  ],                                                                         │
+│  "resolutions": {                                                           │
+│    "react": "18.3.1"  // Força versão específica                            │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+COMANDOS UTILIZADOS:
+- yarn install          → Instala todas as dependências
+- yarn dev:admin        → Inicia o admin panel
+- yarn dev:mobile       → Inicia o app mobile
+- npm start --workspace=backend → Inicia o backend
+
+--------------------------------------------------------------------------------
+PERGUNTA 9: Você usa ambientes virtuais Python (venv, conda, poetry)?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO APLICÁVEL - O PROJETO NÃO USA PYTHON
+
+Conforme respondido na Pergunta 5, o projeto é 100% Node.js/JavaScript/TypeScript.
+
+--------------------------------------------------------------------------------
+PERGUNTA 10: Seus sistemas precisam rodar em Docker localmente?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO OBRIGATÓRIO, MAS DISPONÍVEL PARA POSTGRES
+
+EVIDÊNCIAS:
+Arquivo: /app/backend/docker-compose.yml
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  services:                                                                  │
+│    postgres:                                                                │
+│      image: postgres:15-alpine                                              │
+│      container_name: nexopro-postgres                                       │
+│      environment:                                                           │
+│        POSTGRES_USER: nexopro                                               │
+│        POSTGRES_PASSWORD: Nex1011pRo12                                      │
+│        POSTGRES_DB: nexopro                                                 │
+│        POSTGRES_INITDB_ARGS: "-E UTF8 --locale=pt_BR.UTF-8"                 │
+│      ports:                                                                 │
+│        - "5432:5432"                                                        │
+│      volumes:                                                               │
+│        - postgres_data:/var/lib/postgresql/data                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+AMBIENTE DE DESENVOLVIMENTO ATUAL:
+- PostgreSQL: Conexão direta à VPS externa (177.153.59.183:5432)
+- Backend: Node.js local (porta 8001)
+- Admin: Vite dev server local (porta 3000)
+- Mobile: Expo Go ou expo-dev-client
+
+CONCLUSÃO: Docker é OPCIONAL. O desenvolvimento usa conexão direta ao banco
+em VPS externa. Docker disponível para banco local isolado.
+
+================================================================================
+           SEÇÃO 3: PARTE 2 - BANCO DE DADOS E DADOS (Perguntas 11-20)
+================================================================================
+
+--------------------------------------------------------------------------------
+PERGUNTA 11: Qual a versão do PostgreSQL que seus sistemas exigem?
+--------------------------------------------------------------------------------
+
+RESPOSTA: PostgreSQL 12.22 (Produção/VPS) / PostgreSQL 15 (Docker/CI)
+
+EVIDÊNCIAS:
+- VPS externa: PostgreSQL 12.22 em 177.153.59.183:5432
+- docker-compose.yml: postgres:15-alpine
+- CI/CD (.github/workflows/ci.yml): PostgreSQL 15 como service
+
+COMPATIBILIDADE:
+O código é compatível com PostgreSQL 12+ devido ao uso de:
+- uuid-ossp extension
+- JSONB columns
+- Standard SQL features
+
+--------------------------------------------------------------------------------
+PERGUNTA 12: Você usa alguma extensão específica do Postgres?
+--------------------------------------------------------------------------------
+
+RESPOSTA: APENAS uuid-ossp
+
+EVIDÊNCIAS:
+Arquivo: /app/backend/db/migrations/1700000000000-initial-schema-baseline.js
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  pgm.createExtension('uuid-ossp', { ifNotExists: true });                   │
+│                                                                             │
+│  // Uso nas tabelas:                                                        │
+│  id: {                                                                      │
+│    type: 'uuid',                                                            │
+│    primaryKey: true,                                                        │
+│    default: pgm.func('uuid_generate_v4()')                                  │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+EXTENSÕES NÃO UTILIZADAS:
+- PostGIS (não há geolocalização avançada)
+- pgvector (não há busca semântica/embeddings)
+- pg_trgm (não há busca fuzzy)
+- pg_stat_statements (não há profiling de queries)
+
+--------------------------------------------------------------------------------
+PERGUNTA 13: Você usa ORMs? (Ex: Prisma, TypeORM, SQLAlchemy, Django ORM?)
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO USA ORM - USA pg (node-postgres) DIRETAMENTE
+
+EVIDÊNCIAS:
+Arquivo: /app/backend/services/PostgresService.js
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  const { Pool } = require('pg');                                            │
+│                                                                             │
+│  const pool = new Pool({                                                    │
+│    connectionString: process.env.DATABASE_URL,                              │
+│    max: 20,                    // Máximo de 20 conexões simultâneas         │
+│    min: 5,                     // Mantém 5 conexões idle prontas            │
+│    idleTimeoutMillis: 30000,   // Fecha conexões idle após 30 segundos      │
+│    connectionTimeoutMillis: 5000, // Timeout de 5s para obter conexão       │
+│  });                                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+PADRÃO DE QUERIES:
+Arquivo: /app/backend/models/user.js
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  const User = {                                                             │
+│    async findByEmail(email) {                                               │
+│      const result = await db.query(                                         │
+│        'SELECT id, email, password_hash, ... FROM users WHERE email = $1',  │
+│        [email]                                                              │
+│      );                                                                     │
+│      return result.rows[0];                                                 │
+│    },                                                                       │
+│    // ...                                                                   │
+│  };                                                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+VANTAGENS IDENTIFICADAS:
+- Controle total sobre queries SQL
+- Performance otimizada
+- Sem overhead de ORM
+
+DESVANTAGENS:
+- Mais código boilerplate
+- Migrations manuais
+- Sem type safety automático
+
+--------------------------------------------------------------------------------
+PERGUNTA 14: Você precisa de um banco de dados de Redis para cache ou filas?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO UTILIZA ATUALMENTE (Recomendado para escala)
+
+EVIDÊNCIAS:
+- Nenhuma dependência de redis ou ioredis no package.json
+- Rate limiting usa express-rate-limit (in-memory)
+- Sem sistema de cache centralizado
+- Sem sistema de filas (processamento síncrono)
+
+IMPACTO ATUAL:
+- Rate limiting não funciona em múltiplas instâncias
+- Sem cache de queries frequentes
+- Push notifications processadas sincronamente
+
+RECOMENDAÇÃO TÉCNICA:
+Adicionar Redis para:
+1. Cache de sessões
+2. Rate limiting distribuído
+3. Filas de notificações (Bull/BullMQ)
+4. Pub/Sub para WebSocket scaling
+
+--------------------------------------------------------------------------------
+PERGUNTA 15: Como você faz as Migrations do banco de dados hoje?
+--------------------------------------------------------------------------------
+
+RESPOSTA: node-pg-migrate (v7.5.2)
+
+EVIDÊNCIAS:
+Arquivo: /app/backend/package.json
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  "dependencies": {                                                          │
+│    "node-pg-migrate": "^7.5.2"                                              │
+│  },                                                                         │
+│  "scripts": {                                                               │
+│    "migrate": "node-pg-migrate up"                                          │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+MIGRATIONS EXISTENTES (19 total):
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  1700000000000-initial-schema-baseline.js                                   │
+│  1700000000001-add-message-indexes.js                                       │
+│  1700000000002-add-status-to-scheduled-messages.js                          │
+│  1700000000003-fix-conversation-schema.js                                   │
+│  1700000000004-create-advanced-features-tables.js                           │
+│  1700000000005-add-time-based-access.js                                     │
+│  1700000000006-add-user-permissions-table.js                                │
+│  1700000000007-optimize-queries.js                                          │
+│  1700000000008-create-tasks-table.js                                        │
+│  1700000000009-enhance-session-management.js                                │
+│  1700000000010-add-unrestricted-access-flag.js                              │
+│  1700000000011-add-user-status-message.js                                   │
+│  1700000000012-add-admin-audit-log.js                                       │
+│  1700000000013-add-group-admins.js                                          │
+│  1700000000014-add-media-permissions.js                                     │
+│  1700000000015-add-temp-status.js                                           │
+│  1700000000016-add-dashboard-permission.js                                  │
+│  1700000000017-add-public-keys-table.js                                     │
+│  1700000000018-add-attachment-upload-permission.js                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+EXECUÇÃO:
+- Startup automático: server.js executa migrations no boot
+- Manual: npm run migrate
+
+--------------------------------------------------------------------------------
+PERGUNTA 16: Você precisa de ferramentas visuais para o banco?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO CONFIGURADO NO PROJETO
+
+EVIDÊNCIAS:
+- Nenhuma ferramenta visual incluída no repositório
+- Sem pgAdmin ou DBeaver configurado
+- Acesso via psql command line
+
+RECOMENDAÇÃO:
+- DBeaver (cross-platform, gratuito)
+- pgAdmin (web-based)
+- TablePlus (macOS)
+
+--------------------------------------------------------------------------------
+PERGUNTA 17: Existe necessidade de bancos NoSQL (MongoDB, Firebase)?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO - 100% PostgreSQL RELACIONAL
+
+EVIDÊNCIAS:
+- Nenhuma dependência de MongoDB, Mongoose, Firebase
+- Schema totalmente relacional
+- JSONB usado para dados semi-estruturados (attachments)
+
+DADOS SEMI-ESTRUTURADOS ARMAZENADOS:
+- attachment (JSONB) - Metadados de arquivos anexados
+- preferences (JSONB) - Preferências do usuário
+- details (JSONB) - Detalhes em audit log
+
+--------------------------------------------------------------------------------
+PERGUNTA 18: Os sistemas lidam com grandes volumes de arquivos?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - Imagens, Vídeos, Áudios e Documentos
+
+EVIDÊNCIAS:
+Arquivo: /app/backend/routes/uploads.js
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  const ALLOWED_MIMETYPES = {                                                │
+│    'image/jpeg': ['.jpg', '.jpeg'],                                         │
+│    'image/png': ['.png'],                                                   │
+│    'image/gif': ['.gif'],                                                   │
+│    'image/webp': ['.webp'],                                                 │
+│    'audio/mpeg': ['.mp3'],                                                  │
+│    'audio/ogg': ['.ogg'],                                                   │
+│    'audio/wav': ['.wav'],                                                   │
+│    'video/mp4': ['.mp4'],                                                   │
+│    'video/webm': ['.webm'],                                                 │
+│    'application/pdf': ['.pdf'],                                             │
+│    'application/msword': ['.doc'],                                          │
+│    'application/vnd.openxmlformats-officedocument...': ['.docx'],           │
+│  };                                                                         │
+│                                                                             │
+│  limits: {                                                                  │
+│    fileSize: 50 * 1024 * 1024, // 50MB max                                  │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+TIPOS SUPORTADOS:
+- Imagens: JPEG, PNG, GIF, WebP
+- Áudios: MP3, OGG, WAV (inclui gravações de voz)
+- Vídeos: MP4, WebM
+- Documentos: PDF, DOC, DOCX
+
+--------------------------------------------------------------------------------
+PERGUNTA 19: Onde esses arquivos são armazenados?
+--------------------------------------------------------------------------------
+
+RESPOSTA: LOCAL (pasta /backend/uploads/)
+
+EVIDÊNCIAS:
+Arquivo: /app/backend/routes/uploads.js
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  const storage = multer.diskStorage({                                       │
+│    destination: (req, file, cb) => {                                        │
+│      cb(null, path.join(__dirname, '../uploads'));                          │
+│    },                                                                       │
+│    filename: (req, file, cb) => {                                           │
+│      const randomName = crypto.randomBytes(16).toString('hex');             │
+│      const ext = path.extname(file.originalname).toLowerCase();             │
+│      cb(null, `${randomName}${ext}`);                                       │
+│    },                                                                       │
+│  });                                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+CARACTERÍSTICAS:
+- Biblioteca: multer (1.4.5-lts.1)
+- Diretório: /backend/uploads/
+- Nomes: UUID randômico de 32 caracteres
+- Servido via: express.static()
+- Rate limiting: 10 uploads a cada 10 minutos
+
+LIMITAÇÕES:
+- Não há integração com S3, GCS, ou Azure Blob
+- Não há CDN configurado
+- Não escalável para múltiplas instâncias
+- Backup depende do backup do servidor
+
+RECOMENDAÇÃO:
+Migrar para storage cloud (S3) para produção em escala.
+
+--------------------------------------------------------------------------------
+PERGUNTA 20: Você precisa de seeds (dados de teste) automáticos?
+--------------------------------------------------------------------------------
+
+RESPOSTA: PARCIALMENTE IMPLEMENTADO
+
+EVIDÊNCIAS:
+Migration inicial inclui seeds de permissões:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  PERMISSÕES INICIAIS (seeds):                                               │
+│  • users.read, users.create, users.update, users.delete                     │
+│  • roles.read, roles.create, roles.update, roles.delete                     │
+│  • messages.delete.own, messages.delete.any, messages.edit.own              │
+│  • chat.clear                                                               │
+│  • downloads.images, downloads.audios, downloads.documents                  │
+│  • tasks.read, tasks.read.all, tasks.create, tasks.assign, tasks.update     │
+│  • privacy.can_disable_read_receipts                                        │
+│  • privacy.can_disable_typing_indicator                                     │
+│  • dashboard.access                                                         │
+│  • attachments.upload                                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+NÃO EXISTE:
+- Seeds de usuários de teste
+- Seeds de conversas de teste
+- Seeds de mensagens de teste
+- Comando dedicado para seeding
+
+================================================================================
+           SEÇÃO 4: PARTE 3 - MOBILE / REACT NATIVE (Perguntas 21-30)
+================================================================================
+
+--------------------------------------------------------------------------------
+PERGUNTA 21: Você desenvolve para Android, iOS ou ambos?
+--------------------------------------------------------------------------------
+
+RESPOSTA: AMBOS (Cross-platform via Expo)
+
+EVIDÊNCIAS:
+Arquivo: /app/nexopro-mobile/app.json
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  "ios": {                                                                   │
+│    "jsEngine": "hermes",                                                    │
+│    "bundleIdentifier": "com.nexopro.mobile",                                │
+│    "supportsTablet": true,                                                  │
+│    "infoPlist": {                                                           │
+│      "NSLocationWhenInUseUsageDescription": "...",                          │
+│      "NSCameraUsageDescription": "...",                                     │
+│      "NSPhotoLibraryUsageDescription": "...",                               │
+│      "NSMicrophoneUsageDescription": "..."                                  │
+│    }                                                                        │
+│  },                                                                         │
+│  "android": {                                                               │
+│    "jsEngine": "hermes",                                                    │
+│    "package": "com.nexopro.mobile",                                         │
+│    "adaptiveIcon": {...},                                                   │
+│    "permissions": [                                                         │
+│      "ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION",                      │
+│      "CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE",           │
+│      "RECORD_AUDIO", "VIBRATE"                                              │
+│    ],                                                                       │
+│    "googleServicesFile": "./google-services.json"                           │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Scripts disponíveis:
+- "android": "expo start --android"
+- "ios": "expo start --ios"
+- "web": "expo start --web"
+
+--------------------------------------------------------------------------------
+PERGUNTA 22: Você precisa de emuladores Android rodando no Linux?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SUPORTADO VIA EXPO
+
+O Expo suporta desenvolvimento em Linux com:
+- Android Studio Emulator (requer KVM)
+- Dispositivo físico via USB/WiFi
+- Expo Go app (mais rápido para desenvolvimento)
+- expo-dev-client para native modules
+
+--------------------------------------------------------------------------------
+PERGUNTA 23: Seus apps Mobile usam notificações Push?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - EXPO PUSH NOTIFICATIONS (Implementação completa)
+
+EVIDÊNCIAS:
+Backend - /app/backend/services/ExpoPushService.js:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  const { Expo } = require('expo-server-sdk');                               │
+│                                                                             │
+│  class ExpoPushService {                                                    │
+│    constructor() {                                                          │
+│      this.expo = new Expo();                                                │
+│    }                                                                        │
+│                                                                             │
+│    async sendPushNotification(token, title, body, data) {                   │
+│      // Validação de token                                                  │
+│      // Construção da mensagem                                              │
+│      // Envio com timeout de 30s                                            │
+│      // Verificação de receipts                                             │
+│    }                                                                        │
+│                                                                             │
+│    async sendBulkNotifications(messages) {                                  │
+│      // Chunking automático                                                 │
+│      // Rate limiting                                                       │
+│    }                                                                        │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Mobile - expo-notifications:
+- Registro automático no login
+- Handler para notificações em foreground
+- Handler para cliques em notificações
+- Deep linking para conversas específicas
+- Badge count management
+
+FLUXO COMPLETO:
+1. Usuário faz login
+2. App solicita permissão de notificação
+3. Obtém Expo Push Token
+4. Registra token no backend (/api/notifications/subscribe-native)
+5. Backend envia push quando há mensagem para usuário offline
+
+--------------------------------------------------------------------------------
+PERGUNTA 24: Existe integração com mapas ou GPS no Mobile?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - expo-location + Google Maps Static API
+
+EVIDÊNCIAS:
+Mobile - expo-location (17.0.1):
+- Compartilhamento de localização em mensagens
+- Tipo de mensagem: 'location'
+
+Backend - /app/backend/routes/maps.js:
+- Proxy para Google Maps Static API
+- Geração de imagens de mapa para preview
+
+FUNCIONALIDADES:
+- Captura de coordenadas GPS
+- Compartilhamento em chat
+- Visualização de localização recebida
+- Imagem estática do mapa
+
+--------------------------------------------------------------------------------
+PERGUNTA 25: Você usa bibliotecas de biometria ou câmera?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM, AMBOS
+
+BIOMETRIA:
+Biblioteca: expo-local-authentication (14.0.1)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Funcionalidades:                                                           │
+│  • Verificação de disponibilidade de hardware                               │
+│  • Autenticação via Face ID/Touch ID/Fingerprint                            │
+│  • Refresh token biométrico separado                                        │
+│  • Persistência segura com expo-secure-store                                │
+│                                                                             │
+│  Fluxo:                                                                     │
+│  1. Login com email/senha                                                   │
+│  2. Prompt para habilitar biometria                                         │
+│  3. Se aceito: gera biometricRefreshToken                                   │
+│  4. Próximos logins: autenticação biométrica + refresh                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+CÂMERA:
+Bibliotecas utilizadas:
+- expo-image-picker (15.1.0) → Câmera e galeria
+- expo-av (14.0.5) → Gravação de áudio/vídeo
+- expo-media-library (~16.0.3) → Acesso à galeria
+
+PROTEÇÃO DE TELA:
+Arquivo: /app/nexopro-mobile/src/components/ScreenProtector.tsx
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  import * as ScreenCapture from 'expo-screen-capture';                      │
+│                                                                             │
+│  const ScreenProtector = ({ children }) => {                                │
+│    useEffect(() => {                                                        │
+│      ScreenCapture.preventScreenCaptureAsync();                             │
+│      return () => ScreenCapture.allowScreenCaptureAsync();                  │
+│    }, []);                                                                  │
+│    return <>{children}</>;                                                  │
+│  };                                                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+PERGUNTA 26: Como você faz o deploy de teste?
+--------------------------------------------------------------------------------
+
+RESPOSTA: EAS BUILD + EXPO GO
+
+EVIDÊNCIAS:
+Arquivo: /app/nexopro-mobile/eas.json
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  {                                                                          │
+│    "cli": {                                                                 │
+│      "version": ">= 7.6.0",                                                 │
+│      "appVersionSource": "remote"                                           │
+│    },                                                                       │
+│    "build": {                                                               │
+│      "development": {                                                       │
+│        "developmentClient": true,                                           │
+│        "distribution": "internal"                                           │
+│      },                                                                     │
+│      "preview": {                                                           │
+│        "distribution": "internal",                                          │
+│        "android": {                                                         │
+│          "buildType": "apk",                                                │
+│          "credentialsSource": "remote"                                      │
+│        }                                                                    │
+│      },                                                                     │
+│      "production": {                                                        │
+│        "android": {                                                         │
+│          "buildType": "app-bundle",                                         │
+│          "credentialsSource": "remote"                                      │
+│        }                                                                    │
+│      }                                                                      │
+│    }                                                                        │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+MÉTODOS DE TESTE:
+1. Expo Go - Para desenvolvimento rápido
+2. expo-dev-client - Para custom native modules
+3. EAS Build preview - APK interno para testers
+4. EAS Build production - App bundle para stores
+
+--------------------------------------------------------------------------------
+PERGUNTA 27: Você usa bibliotecas de estilo?
+--------------------------------------------------------------------------------
+
+RESPOSTA: StyleSheet NATIVO (Mobile) + Tailwind CSS (Admin)
+
+MOBILE:
+- StyleSheet.create() nativo do React Native
+- Sistema de temas customizado
+- Suporte a Dark Mode
+
+Arquivo: /app/nexopro-mobile/src/theme/colors.ts
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  const lightThemeColors = { ... };                                          │
+│  const darkThemeColors = { ... };                                           │
+│                                                                             │
+│  export const useThemeColors = () => {                                      │
+│    const theme = useColorScheme() ?? 'light';                               │
+│    return theme === 'dark' ? darkThemeColors : lightThemeColors;            │
+│  };                                                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Arquivo: /app/nexopro-mobile/src/theme/tokens.ts
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };           │
+│  export const borderRadius = { sm: 4, md: 8, lg: 16 };                      │
+│  export const typography = { ... };                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+PALETA DE CORES:
+- Cor Principal: #FFCC00 (Amarelo NexoPro)
+- Blue: #53BDEB
+- Green: #00A884
+- Red: #EF4444
+- Orange: #FF8C00
+
+ADMIN:
+- Tailwind CSS (3.4.1)
+- PostCSS + Autoprefixer
+
+--------------------------------------------------------------------------------
+PERGUNTA 28: Existe integração com pagamentos?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO IDENTIFICADO
+
+EVIDÊNCIAS:
+- Nenhuma dependência de Stripe, PayPal, Apple Pay, Google Pay
+- Nenhuma rota de pagamentos no backend
+- Nenhuma tela de pagamentos no mobile/admin
+
+--------------------------------------------------------------------------------
+PERGUNTA 29: Você usa Deep Linking nos aplicativos?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM (Parcialmente implementado)
+
+EVIDÊNCIAS:
+Arquivo: /app/nexopro-mobile/src/navigation/RootNavigator.tsx
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Notifications.addNotificationResponseReceivedListener(response => {        │
+│    const data = response.notification.request.content.data;                 │
+│    if (data && data.conversationId) {                                       │
+│      navigation.navigate('Mensagens', {                                     │
+│        screen: 'Chat',                                                      │
+│        params: { conversationId: data.conversationId },                     │
+│      });                                                                    │
+│    }                                                                        │
+│  });                                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+IMPLEMENTADO:
+- Deep linking via push notifications
+- Navegação para conversas específicas
+
+NÃO IMPLEMENTADO:
+- URL scheme customizado (nexopro://)
+- Universal links (iOS)
+- App links (Android)
+
+--------------------------------------------------------------------------------
+PERGUNTA 30: Os apps precisam funcionar offline?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM (Parcialmente implementado)
+
+EVIDÊNCIAS:
+Arquivo: /app/nexopro-mobile/src/lib/offlineQueue.ts
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  const QUEUE_KEY = 'nexopro_offline_queue';                                 │
+│                                                                             │
+│  export const saveQueue = async (queue: any[]) => {                         │
+│    await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));            │
+│  };                                                                         │
+│                                                                             │
+│  export const loadQueue = async () => {                                     │
+│    const item = await AsyncStorage.getItem(QUEUE_KEY);                      │
+│    return item ? JSON.parse(item) : [];                                     │
+│  };                                                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+FUNCIONALIDADES OFFLINE:
+- Fila de mensagens offline (envio quando reconectar)
+- Cache de chaves públicas E2E
+- Cache de dados de sessão
+- Zustand para state management
+- WebSocket reconecta automaticamente (exponential backoff)
+
+LIMITAÇÕES:
+- Não há sincronização completa de mensagens offline
+- Não há storage de conversas para leitura offline
+- Não há cache de mídia offline
+
+================================================================================
+      SEÇÃO 5: PARTE 4 - INTELIGÊNCIA ARTIFICIAL E AGENTES (Perguntas 31-40)
+================================================================================
+
+--------------------------------------------------------------------------------
+PERGUNTA 31: Quais tarefas específicas você quer que a IA execute?
+--------------------------------------------------------------------------------
+
+RESPOSTA: ASSISTENTE DE ESCRITA + TRANSCRIÇÃO DE ÁUDIO
+
+EVIDÊNCIAS:
+Arquivo: /app/backend/services/GoogleAIService.js
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  const { GoogleGenAI } = require('@google/genai');                          │
+│                                                                             │
+│  class GoogleAIService {                                                    │
+│    constructor() {                                                          │
+│      this.client = new GoogleGenAI({ apiKey: process.env.API_KEY });        │
+│    }                                                                        │
+│                                                                             │
+│    // 1. REFINAMENTO DE TEXTO                                               │
+│    async enhanceMessage(text, mode) {                                       │
+│      // Modos: 'formal', 'casual', 'expand', 'summarize'                    │
+│      // Timeout: 30 segundos                                                │
+│    }                                                                        │
+│                                                                             │
+│    // 2. GERAÇÃO LIVRE DE TEXTO                                             │
+│    async generateText(prompt) {                                             │
+│      // Modelo: gemini-2.5-flash                                            │
+│    }                                                                        │
+│                                                                             │
+│    // 3. TRANSCRIÇÃO DE ÁUDIO                                               │
+│    async transcribeAudio(audioBase64, mimeType) {                           │
+│      // Modelo: gemini-2.5-pro                                              │
+│      // Timeout: 60 segundos                                                │
+│    }                                                                        │
+│                                                                             │
+│    // 4. STREAMING DE TEXTO                                                 │
+│    async streamText(prompt) {                                               │
+│      // Para respostas longas                                               │
+│    }                                                                        │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+ENDPOINTS API:
+- POST /api/ai/refine-text → Refinamento de mensagens
+- POST /api/ai/summarize-conversation → Resumo de conversas
+- POST /api/ai/transcribe-audio → Speech-to-text
+
+MODOS DE REFINAMENTO:
+- 'formal' → Tom mais formal e profissional
+- 'casual' → Tom mais casual e amigável
+- 'expand' → Expandir com mais detalhes
+- 'summarize' → Resumir mantendo pontos principais
+
+--------------------------------------------------------------------------------
+PERGUNTA 32: No Cursor, você prefere que a IA escreva código inteiro ou sugira?
+--------------------------------------------------------------------------------
+
+RESPOSTA: PERGUNTA PESSOAL - Não determinável pelo código
+
+Esta é uma preferência pessoal do desenvolvedor Josué Silveira sobre como
+utilizar ferramentas de IA para desenvolvimento.
+
+--------------------------------------------------------------------------------
+PERGUNTA 33: Você já possui chaves de API da Anthropic (Claude) ou OpenAI?
+--------------------------------------------------------------------------------
+
+RESPOSTA: O PROJETO USA GOOGLE GEMINI (não Anthropic/OpenAI)
+
+EVIDÊNCIAS:
+- Dependência: "@google/genai": "0.12.0"
+- Variável de ambiente: API_KEY (para Gemini)
+- Modelos: gemini-2.5-flash, gemini-2.5-pro
+
+NÃO UTILIZA:
+- OpenAI (GPT-4, GPT-3.5)
+- Anthropic (Claude)
+
+--------------------------------------------------------------------------------
+PERGUNTA 34: Você quer que a IA gere testes unitários automaticamente?
+--------------------------------------------------------------------------------
+
+RESPOSTA: ESTRATÉGIA DE TESTES DOCUMENTADA
+
+EVIDÊNCIAS:
+Arquivo: /app/docs/TESTING_STRATEGY.md
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  FASES DE COBERTURA:                                                        │
+│  • Fase 1 (Atual): 30% Global - Foco em estabilidade                        │
+│  • Fase 2 (Q1 2026): 50% Global - Mais edge cases                           │
+│  • Fase 3 (Q2 2026): 70% Global - Testes E2E com Detox/Maestro              │
+│                                                                             │
+│  PRIORIZAÇÃO:                                                               │
+│  1. lib/crypto (E2E Encryption) → Meta: 90%                                 │
+│  2. lib/auth (JWT, Biometria) → Meta: 80%                                   │
+│  3. WebSocketProvider → Meta: 70%                                           │
+│  4. lib/api & errorHandler → Meta: 60%                                      │
+│  5. Stores (Zustand) → Meta: 50%                                            │
+│  6. Componentes UI → Meta: 30%                                              │
+│                                                                             │
+│  FERRAMENTAS:                                                               │
+│  • Executor: Jest (com jest-expo)                                           │
+│  • UI Testing: React Native Testing Library                                 │
+│  • Mocks: jest.fn(), jest-websocket-mock                                    │
+│  • Coverage: Codecov                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+PERGUNTA 35: Você quer que a IA documente o código em tempo real?
+--------------------------------------------------------------------------------
+
+RESPOSTA: DOCUMENTAÇÃO EXISTENTE É MANUAL
+
+EVIDÊNCIAS:
+- JSDoc parcial em arquivos do backend
+- Docstrings em funções críticas
+- Arquivos .md extensivos (README, CHANGELOG, etc.)
+
+NÃO HÁ:
+- Geração automática de documentação via IA
+- Integração com ferramentas de auto-doc
+
+--------------------------------------------------------------------------------
+PERGUNTA 36: Você pretende rodar modelos de IA locais (Llama 3)?
+--------------------------------------------------------------------------------
+
+RESPOSTA: PERGUNTA PESSOAL - Não determinável pelo código
+
+O projeto atual usa apenas Google Gemini (cloud).
+
+--------------------------------------------------------------------------------
+PERGUNTA 37: A IA deve ter permissão para fazer commits automáticos?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO CONFIGURADO
+
+EVIDÊNCIAS:
+- Git hooks usados apenas para lint (Husky + lint-staged)
+- Nenhum commit automático configurado
+
+GIT HOOKS CONFIGURADOS:
+- Pre-commit: Prettier formatting, ESLint fix
+- Pre-push: TypeScript type check, Related unit tests
+
+--------------------------------------------------------------------------------
+PERGUNTA 38: Você quer que o Antigravity monitore erros em tempo real?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SENTRY JÁ MONITORA ERROS EM TEMPO REAL
+
+EVIDÊNCIAS:
+- Backend: @sentry/node (8.15.0)
+- Mobile: @sentry/react-native (5.23.0)
+- Admin: @sentry/react (8.15.0)
+
+Sentry configurado para:
+- Error tracking
+- Request tracing
+- Performance monitoring
+
+--------------------------------------------------------------------------------
+PERGUNTA 39: Você usa prompts específicos (Personas) para diferentes tarefas?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - PROMPTS CONFIGURADOS PARA GEMINI
+
+EVIDÊNCIAS:
+Arquivo: /app/backend/services/GoogleAIService.js
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Prompts por modo de refinamento:                                           │
+│                                                                             │
+│  'formal': "Reescreva o texto a seguir em tom formal e profissional..."     │
+│  'casual': "Reescreva o texto a seguir em tom mais casual e amigável..."    │
+│  'expand': "Expanda o texto a seguir com mais detalhes e contexto..."       │
+│  'summarize': "Resuma o texto a seguir mantendo os pontos principais..."    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+PERGUNTA 40: Você quer que a IA crie diagramas de arquitetura automaticamente?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO CONFIGURADO
+
+EVIDÊNCIAS:
+- Nenhuma integração com Mermaid, Excalidraw, PlantUML
+- Diagramas são criados manualmente quando necessário
+
+================================================================================
+        SEÇÃO 6: PARTE 5 - DEVOPS E INFRAESTRUTURA (Perguntas 41-50)
+================================================================================
+
+--------------------------------------------------------------------------------
+PERGUNTA 41: Você usa GitHub, GitLab ou Bitbucket?
+--------------------------------------------------------------------------------
+
+RESPOSTA: GITHUB
+
+EVIDÊNCIAS:
+- Repositório: github.com/edioneixcb/google6
+- .github/workflows/ presente
+- .github/dependabot.yml configurado
+
+--------------------------------------------------------------------------------
+PERGUNTA 42: Você usa GitHub Actions para automação?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - CI/CD COMPLETO
+
+EVIDÊNCIAS:
+Arquivo: /.github/workflows/ci.yml
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  name: CI                                                                   │
+│  on: [pull_request, push]                                                   │
+│  jobs:                                                                      │
+│    lint:          # ESLint em todos os workspaces                           │
+│    type-check:    # TypeScript type checking                                │
+│    test-backend:  # Jest tests (PostgreSQL 15 como service)                 │
+│    test-mobile:   # Jest + React Native Testing Library                     │
+│    test-admin:    # Jest tests + Codecov                                    │
+│    build:         # Expo setup + Admin build + Expo export                  │
+│                                                                             │
+│  Node.js Version: 20.19.4                                                   │
+│  Triggers: pull_request e push para main/develop                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+DEPENDABOT:
+Arquivo: /.github/dependabot.yml
+- Atualização semanal de dependências
+- Separado por workspace (backend, admin, mobile, root)
+- Ignora major updates de Expo/Vite até datas específicas
+
+--------------------------------------------------------------------------------
+PERGUNTA 43: Seus sistemas rodam em qual nuvem?
+--------------------------------------------------------------------------------
+
+RESPOSTA: VPS PRÓPRIA (UBUNTU)
+
+EVIDÊNCIAS:
+Arquivo: /app/DEPLOYMENT_GUIDE.md
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  VPS IP: 177.153.59.183                                                     │
+│  Hostname: nexopro.vps-kinghost.net                                         │
+│  SO: Ubuntu 20.04 LTS                                                       │
+│  PostgreSQL: 12.22                                                          │
+│  Process Manager: PM2                                                       │
+│  Reverse Proxy: Nginx                                                       │
+│  SSL: Let's Encrypt (Certbot)                                               │
+│  Firewall: UFW                                                              │
+│  Backend Port: 8001                                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+NÃO UTILIZA:
+- AWS (EC2, RDS, S3)
+- Google Cloud Platform
+- Azure
+- DigitalOcean
+- Heroku/Vercel/Netlify
+
+--------------------------------------------------------------------------------
+PERGUNTA 44: Você precisa de um ambiente de "Staging"?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM (SUPORTADO)
+
+EVIDÊNCIAS:
+- NODE_ENV suporta: 'development', 'staging', 'production'
+- Código tem tratamentos específicos por ambiente
+- EAS Build tem perfis: development, preview, production
+
+--------------------------------------------------------------------------------
+PERGUNTA 45: Como você gerencia as variáveis de ambiente (.env)?
+--------------------------------------------------------------------------------
+
+RESPOSTA: .ENV COM DOTENV + VALIDAÇÃO NO STARTUP
+
+EVIDÊNCIAS:
+Arquivo: /app/backend/server.js
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  require('dotenv').config();                                                │
+│                                                                             │
+│  VARIÁVEIS OBRIGATÓRIAS:                                                    │
+│  • DATABASE_URL     → postgresql://user:pass@host:5432/db                   │
+│  • JWT_SECRET       → Chave secreta para tokens                             │
+│  • CORS_ALLOWED_ORIGINS → Origens permitidas (separadas por vírgula)        │
+│                                                                             │
+│  VARIÁVEIS RECOMENDADAS:                                                    │
+│  • API_KEY          → Google Gemini API Key                                 │
+│  • EXPO_ACCESS_TOKEN → Token para push notifications                        │
+│  • SENTRY_DSN       → DSN do Sentry para error tracking                     │
+│                                                                             │
+│  VALIDAÇÃO:                                                                 │
+│  if (missingRequired.length > 0) {                                          │
+│    console.error('❌ ERRO FATAL: Variáveis obrigatórias ausentes');         │
+│    process.exit(1);                                                         │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+SEGURANÇA:
+- .env no .gitignore
+- .env.example com documentação
+- Validação no startup
+- Warnings para variáveis recomendadas ausentes
+
+--------------------------------------------------------------------------------
+PERGUNTA 46: Você usa ferramentas de Log (Sentry, Logtail)?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - SENTRY + LOGGER CUSTOMIZADO
+
+EVIDÊNCIAS:
+SENTRY:
+- Backend: @sentry/node (8.15.0)
+- Mobile: @sentry/react-native (5.23.0)
+- Admin: @sentry/react (8.15.0)
+
+LOGGER CUSTOMIZADO:
+Arquivo: /app/backend/lib/logger.js
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  const logger = {                                                           │
+│    info: (message, context = {}) => { ... },                                │
+│    error: (message, error, context = {}) => { ... },                        │
+│    warn: (message, context = {}) => { ... },                                │
+│  };                                                                         │
+│                                                                             │
+│  // Structured logging (JSON em produção)                                   │
+│  // Inclui: timestamp, level, message, context                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+AUDIT LOGGER:
+Arquivo: /app/backend/lib/auditLogger.js
+- Registra ações administrativas em admin_audit_log
+- Usado para compliance e rastreabilidade
+
+--------------------------------------------------------------------------------
+PERGUNTA 47: Você precisa de monitoramento de performance (APM)?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SENTRY COM TRACING HABILITADO
+
+EVIDÊNCIAS:
+- Request Handler
+- Tracing Handler
+- Error Handler
+
+NÃO HÁ:
+- New Relic
+- Datadog
+- Elastic APM
+
+--------------------------------------------------------------------------------
+PERGUNTA 48: Qual o fluxo de branch que você usa?
+--------------------------------------------------------------------------------
+
+RESPOSTA: FEATURE BRANCHES COM CI
+
+EVIDÊNCIAS:
+- Branches protegidos: main, develop
+- CI executa em: pull_request, push para main/develop
+
+WORKFLOW:
+1. Feature branch criada de develop
+2. PR para develop
+3. CI executa (lint, type-check, testes, build)
+4. Code review
+5. Merge
+6. Merge de develop para main (release)
+
+GIT HOOKS (Husky + lint-staged):
+- Pre-commit: Prettier, ESLint (apenas arquivos alterados)
+- Pre-push: TypeScript check, Related tests
+
+--------------------------------------------------------------------------------
+PERGUNTA 49: Você precisa de SSL (HTTPS) configurado no ambiente local?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO OBRIGATÓRIO
+
+EVIDÊNCIAS:
+- Desenvolvimento local: HTTP
+  - Backend: http://localhost:8001
+  - Admin: http://localhost:3000
+- Produção: HTTPS via Nginx
+  - SSL: Let's Encrypt (Certbot)
+
+--------------------------------------------------------------------------------
+PERGUNTA 50: Os sistemas usam autenticação via terceiros?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO - AUTENTICAÇÃO JWT PROPRIETÁRIA
+
+EVIDÊNCIAS:
+- JWT com Device Binding
+- Refresh Token Rotation
+- Sem OAuth social
+
+NÃO HÁ:
+- Google OAuth
+- Apple Sign-In
+- Facebook Login
+- Auth0
+- Firebase Auth
+
+================================================================================
+        SEÇÃO 7: PARTE 6 - FERRAMENTAS E INTERFACE (Perguntas 51-60)
+================================================================================
+
+--------------------------------------------------------------------------------
+PERGUNTA 51: Além do Cursor, você usa outras ferramentas de design?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO DETERMINÁVEL PELO CÓDIGO
+
+Esta é uma preferência pessoal do desenvolvedor.
+
+--------------------------------------------------------------------------------
+PERGUNTA 52: Você prefere terminal integrado ou separado?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO DETERMINÁVEL PELO CÓDIGO
+
+Esta é uma preferência pessoal do desenvolvedor.
+
+--------------------------------------------------------------------------------
+PERGUNTA 53: Você usa fontes específicas para programação?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO DETERMINÁVEL PELO CÓDIGO
+
+Esta é uma preferência pessoal do desenvolvedor.
+
+--------------------------------------------------------------------------------
+PERGUNTA 54: Qual o seu nível de exigência com acessibilidade (WCAG)?
+--------------------------------------------------------------------------------
+
+RESPOSTA: IMPLEMENTAÇÃO BÁSICA
+
+EVIDÊNCIAS do ROADMAP.md:
+- "Fase 9 a 13: Melhorias Contínuas" inclui "i18n, a11y"
+
+FUNCIONALIDADES DE ACESSIBILIDADE:
+- Suporte a Dark Mode
+- Tamanhos de fonte adequados
+- Contraste de cores na paleta
+- Não há audit WCAG documentado
+
+--------------------------------------------------------------------------------
+PERGUNTA 55: Você precisa de ferramentas de teste de carga?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO CONFIGURADO
+
+EVIDÊNCIAS:
+- Nenhuma ferramenta de load testing no projeto
+- Sem k6, Artillery, JMeter, ou similares
+
+--------------------------------------------------------------------------------
+PERGUNTA 56: Você usa linters de forma rigorosa?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - ESLint + Prettier + Husky
+
+EVIDÊNCIAS:
+Backend package.json:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  "eslint": "8.57.0"                                                         │
+│  "prettier": "3.2.5"                                                        │
+│  "husky" (git hooks)                                                        │
+│  "lint-staged" (apenas arquivos alterados)                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+EXECUÇÃO:
+- Pre-commit: Prettier formatting, ESLint fix
+- CI: ESLint em todos os workspaces
+
+--------------------------------------------------------------------------------
+PERGUNTA 57: Você quer automação para gerar READMEs e documentação?
+--------------------------------------------------------------------------------
+
+RESPOSTA: DOCUMENTAÇÃO MANUAL EXTENSIVA EXISTENTE
+
+EVIDÊNCIAS:
+Arquivos de documentação existentes:
+- README.md
+- CHANGELOG.md
+- DEPLOYMENT_GUIDE.md
+- ROADMAP.md
+- ROADMAP_FINAL.md
+- SECURITY.md
+- docs/LGPD_COMPLIANCE.md
+- docs/SECURITY_DECISIONS.md
+- docs/TESTING_STRATEGY.md
+- docs/DEPENDENCY_UPDATE_ROADMAP.md
+- docs/runbooks/*.md
+
+NÃO HÁ:
+- Geração automática de documentação
+
+--------------------------------------------------------------------------------
+PERGUNTA 58: Você usa ferramentas de API como Postman ou Insomnia?
+--------------------------------------------------------------------------------
+
+RESPOSTA: OPENAPI/SWAGGER DISPONÍVEL
+
+EVIDÊNCIAS:
+Arquivo: /app/backend/openapi.yaml
+- Especificação OpenAPI 3.0
+- Documentação de endpoints
+
+NÃO HÁ:
+- Postman collections no repositório
+- Insomnia workspace
+
+--------------------------------------------------------------------------------
+PERGUNTA 59: Você precisa de integração com WhatsApp API ou Telegram Bot?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO IDENTIFICADO
+
+EVIDÊNCIAS:
+- Nenhuma dependência de WhatsApp Business API
+- Nenhuma dependência de Telegram Bot API
+- NexoPro é um messenger independente
+
+--------------------------------------------------------------------------------
+PERGUNTA 60: Você usa sistemas de filas como RabbitMQ ou Celery?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO - PROCESSAMENTO SÍNCRONO
+
+EVIDÊNCIAS:
+- Nenhuma dependência de RabbitMQ, Bull, BullMQ
+- Push notifications processadas sincronamente
+- Sem sistema de filas
+
+RECOMENDAÇÃO:
+Adicionar Redis + Bull/BullMQ para:
+- Filas de notificações
+- Processamento assíncrono de tarefas pesadas
+- Rate limiting distribuído
+
+================================================================================
+        SEÇÃO 8: PARTE 7 - NEGÓCIO E CONTEXTO (Perguntas 61-70)
+================================================================================
+
+--------------------------------------------------------------------------------
+PERGUNTA 61: Qual o volume de usuários esperado?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO ESPECIFICADO
+
+ESTIMATIVA BASEADA NA ARQUITETURA:
+- Pool PostgreSQL: max 20 conexões
+- Rate limiting: 500 req/15min geral
+- Sem Redis = processamento síncrono
+- WebSocket em única instância
+
+CAPACIDADE ESTIMADA: ~1.000-5.000 usuários ativos simultâneos
+(pode variar com hardware da VPS)
+
+--------------------------------------------------------------------------------
+PERGUNTA 62: Existem requisitos de LGPD específicos?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - IMPLEMENTAÇÃO COMPLETA
+
+EVIDÊNCIAS:
+Arquivo: /app/docs/LGPD_COMPLIANCE.md
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Art. 18, III - PORTABILIDADE                                               │
+│  • Endpoint: GET /api/gdpr/export                                           │
+│  • Formato: JSON estruturado                                                │
+│  • Conteúdo: Perfil, mensagens, conversas, tokens, sessões, audit log       │
+│  • Exclusões: Senha (segurança), mensagens de outros (privacidade)          │
+│                                                                             │
+│  Art. 18, VI - ELIMINAÇÃO                                                   │
+│  • Endpoint: DELETE /api/gdpr/delete-account                                │
+│  • Confirmação: Requer string "DELETE_MY_ACCOUNT"                           │
+│  • Cascata: Remove de 8+ tabelas relacionadas                               │
+│  • Irreversível: Hard delete, sem soft delete                               │
+│                                                                             │
+│  RETENÇÃO DE DADOS:                                                         │
+│  • Audit logs: Mantidos por 5 anos (anonimizados)                           │
+│  • Mensagens deletadas: Removidas imediatamente do BD                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+PERGUNTA 63: Você precisa de dashboards administrativos?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - ADMIN PANEL COMPLETO
+
+EVIDÊNCIAS:
+Pasta: /app/admin/
+
+FUNCIONALIDADES:
+- Gerenciamento de usuários (CRUD)
+- Gerenciamento de cargos/permissões (RBAC)
+- Gerenciamento de empresas
+- Visualização de presença online
+- Configuração de horários de acesso
+- Audit log viewer
+- Gerenciamento de push tokens
+- WebSocket para status em tempo real
+
+TECNOLOGIAS:
+- React 18
+- Vite
+- Tailwind CSS
+- React Router DOM
+- Zustand
+- WebSocket
+
+--------------------------------------------------------------------------------
+PERGUNTA 64: Os sistemas são multitenant?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - MULTI-EMPRESA
+
+EVIDÊNCIAS:
+- Tabela: empresas
+- Relacionamento: users.empresa_id → empresas.id
+- Filtros: Usuários veem apenas dados de sua empresa
+- Cargos: Específicos por empresa
+
+MODELO:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Empresa A                     Empresa B                                    │
+│  ├── Usuários                  ├── Usuários                                 │
+│  ├── Cargos                    ├── Cargos                                   │
+│  ├── Conversas                 ├── Conversas                                │
+│  └── Mensagens                 └── Mensagens                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+PERGUNTA 65: Existe integração com ERPs ou sistemas de nota fiscal?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO IDENTIFICADO
+
+EVIDÊNCIAS:
+- Nenhuma integração com SAP, Oracle, ou ERPs nacionais
+- Nenhuma integração com NFe, NFSe
+
+--------------------------------------------------------------------------------
+PERGUNTA 66: Qual a frequência de atualização (Deploys)?
+--------------------------------------------------------------------------------
+
+RESPOSTA: CI/CD POR PR
+
+EVIDÊNCIAS:
+- Cada Pull Request dispara pipeline de CI
+- Deploy manual ou automatizado após merge em main
+- Versionamento semântico (v2.0.0)
+
+--------------------------------------------------------------------------------
+PERGUNTA 67: Você trabalha sozinho ou tem parceiros?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO DETERMINÁVEL PELO CÓDIGO
+
+O código sugere desenvolvimento individual ou pequena equipe baseado em:
+- Único autor em commits
+- Estrutura de projeto organizada para solo dev
+
+--------------------------------------------------------------------------------
+PERGUNTA 68: Qual o principal gargalo que você sente hoje?
+--------------------------------------------------------------------------------
+
+RESPOSTA: GARGALOS IDENTIFICADOS NA ANÁLISE
+
+1. AUSÊNCIA DE REDIS
+   - Rate limiting não distribuído
+   - Sem cache centralizado
+   - Push notifications síncronas
+
+2. STORAGE LOCAL DE ARQUIVOS
+   - Não escalável para múltiplas instâncias
+   - Sem CDN
+   - Backup dependente do servidor
+
+3. BACKEND EM JAVASCRIPT
+   - Falta tipagem em runtime
+   - Erros descobertos apenas em execução
+   - 25+ erros TypeScript documentados
+
+4. POOL DE CONEXÕES LIMITADO
+   - max 20 conexões PostgreSQL
+   - Pode ser gargalo sob carga
+
+5. SINGLE INSTANCE
+   - WebSocket em única instância
+   - Sem horizontal scaling
+
+--------------------------------------------------------------------------------
+PERGUNTA 69: Você quer que o sistema Linux te avise sobre atualizações de IA?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO CONFIGURADO
+
+EVIDÊNCIAS:
+- Dependabot configurado para npm
+- Sem notificações específicas de IA
+
+--------------------------------------------------------------------------------
+PERGUNTA 70: Qual a sua meta principal: Velocidade ou Perfeição?
+--------------------------------------------------------------------------------
+
+RESPOSTA: DOCUMENTAÇÃO INDICA EQUILÍBRIO
+
+EVIDÊNCIAS:
+Arquivo: /app/ROADMAP_FINAL.md
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  PRINCÍPIOS SEGUIDOS:                                                       │
+│  1. YAGNI (You Aren't Gonna Need It)                                        │
+│  2. KISS (Keep It Simple)                                                   │
+│  3. Premature optimization is the root of all evil                          │
+│  4. Worse is better (sistema funcional > perfeição teórica)                 │
+│                                                                             │
+│  RESULTADO:                                                                 │
+│  • 5 itens aprovados (1h15min de trabalho)                                  │
+│  • 11 itens descartados (overengineering evitado)                           │
+│  • Foco em problemas reais com impacto mensurável                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+               SEÇÃO 9: ANÁLISE DE SEGURANÇA AVANÇADA
+================================================================================
+
+AUTENTICAÇÃO JWT COM DEVICE BINDING:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Access Token:                                                              │
+│  • Validade: 15 minutos                                                     │
+│  • Payload: id, email, empresa_id, device_id, is_super_admin, permissions   │
+│  • Envio: Cookie HttpOnly (web) ou Bearer Header (mobile)                   │
+│                                                                             │
+│  Refresh Token:                                                             │
+│  • Validade: 7 dias (30 dias para biométrico)                               │
+│  • Armazenamento: Banco de dados (SHA-256 hash)                             │
+│  • Rotação: Novo token a cada refresh                                       │
+│  • Detecção de reutilização: Invalida todas as sessões                      │
+│                                                                             │
+│  Device Binding:                                                            │
+│  • device_id incluído no token                                              │
+│  • Verificado em cada request                                               │
+│  • Previne uso de token roubado em outro dispositivo                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+CRIPTOGRAFIA E2E (RSA-OAEP + AES-GCM):
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Biblioteca: react-native-quick-crypto                                      │
+│                                                                             │
+│  CHAVES RSA:                                                                │
+│  • Algoritmo: RSA-OAEP                                                      │
+│  • Tamanho: 2048 bits                                                       │
+│  • Hash: SHA-256                                                            │
+│  • Armazenamento: expo-secure-store (chave privada)                         │
+│  • Sincronização: Chave pública no servidor                                 │
+│                                                                             │
+│  CHAVES AES (para arquivos):                                                │
+│  • Algoritmo: AES-GCM                                                       │
+│  • Tamanho: 256 bits                                                        │
+│  • IV: 12 bytes random                                                      │
+│                                                                             │
+│  FLUXO:                                                                     │
+│  1. Remetente obtém chave pública do destinatário                           │
+│  2. Mensagem criptografada com RSA-OAEP                                     │
+│  3. Servidor armazena sem acesso ao conteúdo                                │
+│  4. Destinatário descriptografa com chave privada                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+RATE LIMITING:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  General:  500 req / 15 min                                                 │
+│  Auth:     10 tentativas / 15 min (skip successful)                         │
+│  Refresh:  50 req / 15 min (by token, not IP)                               │
+│  Create:   30 req / 1 min                                                   │
+│  Upload:   10 req / 10 min                                                  │
+│  WebSocket: 10 mensagens / segundo por usuário                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+OUTRAS PROTEÇÕES:
+- Helmet: Headers de segurança HTTP
+- CORS: Whitelist de origens permitidas
+- Cookie: HttpOnly, Secure (prod), SameSite=Lax
+- Password: bcrypt com salt rounds
+- Input Sanitization: DOMPurify (isomorphic-dompurify)
+- SQL Injection: Queries parametrizadas
+- RBAC: Sistema de permissões granular
+- Audit Log: Registro de ações administrativas
+- Screen Capture Protection: expo-screen-capture
+
+================================================================================
+               SEÇÃO 10: DÉBITO TÉCNICO E VULNERABILIDADES
+================================================================================
+
+TYPESCRIPT_DEBT.md:
+- ~25 erros TypeScript pendentes
+- Falta tipagem em alguns componentes
+- any types em uso
+
+VULNERABILIDADES CONHECIDAS (docs/SECURITY_DECISIONS.md):
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  1. ✅ send <0.19.0 - RESOLVIDO (via Express 4.21.2)                        │
+│                                                                             │
+│  2. ⚠️ esbuild ≤0.24.2 em Vite - RISCO ACEITO                               │
+│     - Afeta apenas desenvolvimento                                          │
+│     - Dev server em localhost (não público)                                 │
+│     - Decisão: Aguardar Vite 7.x estável (Q1 2026)                          │
+│                                                                             │
+│  3. ℹ️ Expo SDK 51 → 54 - VERSÃO DESATUALIZADA                              │
+│     - Não é vulnerabilidade, é update major                                 │
+│     - Breaking changes significativos                                       │
+│     - Decisão: Aguardar Q2 2026                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                    SEÇÃO 11: ROADMAP DE EVOLUÇÃO
+================================================================================
+
+FASE ATUAL: 21 de 21 fases concluídas
+
+PRÓXIMOS PASSOS:
+1. Dashboard Interativo Avançado (Admin) - ADIADO
+2. Gerenciamento de Tarefas (Admin) - ADIADO
+3. Métricas do Dashboard ao Vivo - EM ANDAMENTO
+4. Notificações Administrativas - EM ANDAMENTO
+
+ATUALIZAÇÕES PLANEJADAS:
+- Q1 2026: Vite 5 → 7
+- Q2 2026: Expo 51 → 54 + React Native 0.76
+
+================================================================================
+                        SEÇÃO 12: ANEXOS TÉCNICOS
+================================================================================
+
+TABELAS DO BANCO DE DADOS (22 total):
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  CORE:                                                                      │
+│  • users, empresas, cargos, permissoes, cargo_permissoes, user_permissoes   │
+│                                                                             │
+│  MENSAGERIA:                                                                │
+│  • conversations, participants, messages, scheduled_messages                │
+│  • message_read_receipts, poll_votes, group_admins                          │
+│                                                                             │
+│  AUTENTICAÇÃO/SEGURANÇA:                                                    │
+│  • user_sessions, user_public_keys, user_access_schedules                   │
+│  • download_audit_log, admin_audit_log                                      │
+│                                                                             │
+│  NOTIFICAÇÕES:                                                              │
+│  • expo_push_tokens, push_subscriptions                                     │
+│                                                                             │
+│  TAREFAS:                                                                   │
+│  • tasks                                                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+DEPENDÊNCIAS PRINCIPAIS:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  BACKEND:                                                                   │
+│  • express: ^4.21.2                                                         │
+│  • pg: 8.11.5                                                               │
+│  • ws: 8.17.1                                                               │
+│  • jsonwebtoken: 9.0.2                                                      │
+│  • bcrypt: 5.1.1                                                            │
+│  • @google/genai: 0.12.0                                                    │
+│  • expo-server-sdk: ^3.10.0                                                 │
+│  • @sentry/node: ^8.15.0                                                    │
+│  • zod: ^3.23.8                                                             │
+│                                                                             │
+│  MOBILE:                                                                    │
+│  • expo: 51.0.14                                                            │
+│  • react: ^18.2.0                                                           │
+│  • react-native: 0.74.5                                                     │
+│  • zustand: 4.5.2                                                           │
+│  • @react-navigation/*: ^7.x                                                │
+│                                                                             │
+│  ADMIN:                                                                     │
+│  • react: ^18.2.0                                                           │
+│  • vite: ^5.1.4                                                             │
+│  • tailwindcss: ^3.4.1                                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                           FIM DO DOCUMENTO
+================================================================================
+                    Total de Perguntas Respondidas: 70
+                    Análise Baseada em Código-Fonte Real
+                    Sem Suposições - Todas Evidências Documentadas
+================================================================================

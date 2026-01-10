@@ -1,0 +1,2089 @@
+================================================================================
+                    ANÁLISE COMPLETA DO SISTEMA NEXOPRO
+                    Documento de Investigação Técnica Avançada
+================================================================================
+
+Data de Geração: Agosto 2025
+Sistema Analisado: NEXOPRO - Plataforma de Gestão de Comentários de Redes Sociais com IA
+Versão do Sistema: 3.6.0
+Score de Qualidade: 85/100
+
+================================================================================
+                         SUMÁRIO EXECUTIVO
+================================================================================
+
+O NEXOPRO é um sistema enterprise de gestão de comentários e avaliações de redes
+sociais (Facebook, Instagram, Google Business Profile) com respostas automatizadas
+por Inteligência Artificial. O sistema foi construído seguindo Clean Architecture
+com separação clara de camadas e princípios SOLID.
+
+STACK TECNOLÓGICO PRINCIPAL:
+- Backend: FastAPI (Python 3.11) com SQLAlchemy 2.0
+- Frontend: React 18 + TypeScript 5.3 + Vite 5.0
+- Banco de Dados: PostgreSQL 15 (principal) + MongoDB 6.0 (auxiliar)
+- Cache/Filas: Redis
+- AI: OpenAI GPT-4o
+- Deploy: Docker Compose + Nginx
+
+================================================================================
+           PARTE 1: ARQUITETURA E ESTRUTURA
+================================================================================
+
+--------------------------------------------------------------------------------
+1.1 TIPO DE ARQUITETURA: MONÓLITO OU MICROSSERVIÇOS?
+--------------------------------------------------------------------------------
+
+RESPOSTA: MONÓLITO MODULAR (Modular Monolith)
+
+O sistema é um MONÓLITO bem estruturado, não microsserviços. Embora possua
+separação clara de responsabilidades, todos os componentes rodam em um único
+processo backend e compartilham o mesmo banco de dados.
+
+EVIDÊNCIAS:
+- Único arquivo docker-compose.yml orquestrando todos os serviços
+- Único banco PostgreSQL compartilhado (DATABASE_URL)
+- Backend único servido pelo uvicorn (não há múltiplos serviços independentes)
+- Comunicação interna via chamadas de função, não APIs entre serviços
+
+ESTRUTURA MONÓLITO:
+/app/
+├── backend/           # Único backend FastAPI
+│   └── src/
+│       ├── domain/           # Regras de negócio puras
+│       ├── application/      # Use cases e serviços
+│       ├── infrastructure/   # Implementações concretas
+│       └── presentation/     # API endpoints
+└── frontend/          # Único frontend React
+
+VANTAGENS DESTA ABORDAGEM:
+1. Simplicidade operacional (deploy único)
+2. Transações ACID garantidas
+3. Debug mais fácil
+4. Latência reduzida (sem network hops internos)
+5. Menor overhead de infraestrutura
+
+--------------------------------------------------------------------------------
+1.2 CLEAN ARCHITECTURE: IMPLEMENTAÇÃO DETALHADA
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - Clean Architecture Completa (4 Camadas)
+
+O backend implementa Clean Architecture de forma rigorosa com as seguintes camadas:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        PRESENTATION LAYER                                    │
+│  Localização: /app/backend/src/presentation/                                │
+│                                                                             │
+│  Responsabilidades:                                                         │
+│  - API Routers (35+ arquivos em /api/v1/)                                  │
+│  - Middleware (auth, logging, rate limiting)                               │
+│  - Schemas Pydantic (request/response validation)                          │
+│  - WebSocket handlers                                                       │
+│                                                                             │
+│  Arquivos principais:                                                       │
+│  - auth.py (14.227 bytes) - Autenticação JWT                               │
+│  - comments.py (23.226 bytes) - CRUD comentários                           │
+│  - analytics.py (46.068 bytes) - Dashboard e métricas                      │
+│  - oauth.py (66.246 bytes) - OAuth Facebook/Instagram/Google               │
+│  - users.py (44.417 bytes) - Gestão de usuários                            │
+│                                                                             │
+│  Total: 156 endpoints HTTP + WebSocket                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        APPLICATION LAYER                                     │
+│  Localização: /app/backend/src/application/                                 │
+│                                                                             │
+│  Responsabilidades:                                                         │
+│  - Use Cases (55 classes identificadas)                                    │
+│  - Application Services                                                     │
+│  - DTOs (Data Transfer Objects)                                            │
+│  - Orquestração de fluxos de negócio                                       │
+│                                                                             │
+│  Categorias de Use Cases:                                                   │
+│  /use_cases/                                                                │
+│  ├── auth/           - Login, Register, Logout, RefreshToken               │
+│  ├── oauth/          - DiscoverFacebookPages, callbacks                    │
+│  ├── oauth_v3/       - Nova arquitetura OAuth v3.0                         │
+│  ├── ai_responses/   - GenerateResponse, AutoApprove                       │
+│  ├── comments/       - CRUD comentários                                    │
+│  ├── stores/         - CreateStore, ImportGoogleLocation                   │
+│  ├── webhooks/       - ProcessWebhookEvent, DeliveryProcessing             │
+│  ├── users/          - Gestão de usuários                                  │
+│  ├── roles/          - Gestão de perfis                                    │
+│  ├── templates/      - Templates de resposta                               │
+│  └── permissions/    - Controle de acesso                                  │
+│                                                                             │
+│  Services principais:                                                       │
+│  - sentiment_analysis_service.py - Análise de sentimento (OpenAI)         │
+│  - predictive_analytics_service_v2.py - Previsão ARIMA                    │
+│  - token_refresh_service.py - Renovação tokens OAuth                       │
+│  - ai_cost_service.py - Tracking de custos IA                              │
+│  - confidence_scorer.py - Score de confiança respostas                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          DOMAIN LAYER                                        │
+│  Localização: /app/backend/src/domain/                                      │
+│                                                                             │
+│  Responsabilidades:                                                         │
+│  - Entidades de domínio (regras de negócio puras)                          │
+│  - Interfaces de repositórios (abstrações)                                 │
+│  - Enums do sistema                                                         │
+│  - Domain Services                                                          │
+│                                                                             │
+│  Estrutura:                                                                 │
+│  /domain/                                                                   │
+│  ├── enums/          - CommentStatus, Platform, ResponseType               │
+│  ├── repositories/   - Interfaces abstratas (contracts)                    │
+│  └── services/                                                              │
+│      └── oauth/                                                             │
+│          └── state_manager.py - Gerenciamento estado OAuth                 │
+│                                                                             │
+│  Princípio DIP: Domain NÃO deve importar de Infrastructure                 │
+│  VIOLAÇÃO ATUAL: 3 imports ilegais em state_manager.py (linhas 91,170,284) │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      INFRASTRUCTURE LAYER                                    │
+│  Localização: /app/backend/src/infrastructure/                              │
+│                                                                             │
+│  Responsabilidades:                                                         │
+│  - Implementações concretas de repositórios                                │
+│  - Conexões de banco de dados                                               │
+│  - Cache Redis                                                              │
+│  - Clientes de APIs externas                                               │
+│  - Background Jobs                                                          │
+│  - WebSocket Manager                                                        │
+│                                                                             │
+│  Estrutura detalhada:                                                       │
+│  /infrastructure/                                                           │
+│  ├── database/                                                              │
+│  │   ├── models/         - 33 SQLAlchemy models                            │
+│  │   ├── repositories/   - 36 repository implementations                   │
+│  │   ├── session.py      - AsyncSession factory                            │
+│  │   ├── health.py       - Pool warm-up e health checks                    │
+│  │   └── sharding/       - Preparação para sharding futuro                 │
+│  ├── cache/                                                                 │
+│  │   └── redis_client.py - Conexão Redis + operações                       │
+│  ├── external_apis/                                                         │
+│  │   ├── facebook_client.py     - Graph API (433 linhas)                   │
+│  │   ├── facebook_token_validator.py (469 linhas)                          │
+│  │   └── ...                                                                │
+│  ├── external/                                                              │
+│  │   └── google_business_client.py (546 linhas)                            │
+│  ├── jobs/               - APScheduler jobs                                │
+│  │   ├── comment_sync_job.py                                               │
+│  │   ├── google_token_refresh_job.py                                       │
+│  │   ├── notification_job.py (22.331 bytes - maior job)                    │
+│  │   ├── priority_recalculation_job.py                                     │
+│  │   ├── quota_reset_job.py                                                │
+│  │   ├── integrity_validation_job.py                                       │
+│  │   └── outbox_processor_job.py                                           │
+│  ├── scheduler/                                                             │
+│  │   └── jobs.py (705 linhas) - Scheduler principal                        │
+│  └── websocket/                                                             │
+│      └── manager.py      - Socket.IO manager                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+MÉTRICAS CLEAN ARCHITECTURE:
+- Total de arquivos Python backend: 326
+- Total de diretórios: 106
+- Linhas de código backend: 67.782
+- Use Cases implementados: 55
+- Repositories: 36
+- Endpoints API: 156
+
+--------------------------------------------------------------------------------
+1.3 COMUNICAÇÃO ENTRE SISTEMAS
+--------------------------------------------------------------------------------
+
+RESPOSTA: APIs REST + WebSockets + Webhooks
+
+1. APIs REST (Principal):
+   - Framework: FastAPI
+   - Formato: JSON
+   - Autenticação: JWT Bearer Token
+   - Versionamento: /api/v1/* e /api/v3/* (OAuth)
+   - Documentação: OpenAPI (Swagger) em /docs
+
+2. WebSockets (Real-time):
+   - Biblioteca: Socket.IO (python-socketio)
+   - Uso: Notificações em tempo real, atualizações de dashboard
+   - Endpoint: VITE_WS_URL=wss://dominio.com
+
+3. Webhooks (Recebimento de eventos):
+   - Facebook: Notificações de comentários
+   - Instagram: Notificações de comentários
+   - Google: Notificações de avaliações
+   - Endpoint: /api/v1/webhooks/
+
+4. APIs Externas (Consumo):
+   - Facebook Graph API v23.0
+   - Instagram Graph API
+   - Google My Business API
+   - OpenAI API (GPT-4o)
+
+EXEMPLO DE FLUXO DE COMUNICAÇÃO:
+```
+[Frontend React] 
+    │
+    ├─── REST API ───► [FastAPI Backend] ◄─── Webhook ─── [Facebook]
+    │                        │
+    └─── WebSocket ──────────┘
+                             │
+                             ▼
+                    [PostgreSQL + Redis]
+```
+
+--------------------------------------------------------------------------------
+1.4 SISTEMA LEGADO E INTEGRAÇÃO
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - OAuth v2.0 em deprecação
+
+O sistema mantém compatibilidade com versões anteriores através de feature flags:
+
+SISTEMA LEGADO: OAuth v2.0 (store-level connections)
+SISTEMA ATUAL: OAuth v3.0 (organization-level connections)
+
+Configuração (.env):
+```
+# Feature Flags para migração gradual
+OAUTH_V3_ENABLED=true          # Global flag
+OAUTH_V3_FACEBOOK=true         # Per-platform
+OAUTH_V3_GOOGLE=true
+OAUTH_V3_INSTAGRAM=true
+
+# Backward Compatibility
+V2_ENDPOINTS_ENABLED=true      # Mantém endpoints v2.0 ativos
+V2_ENDPOINTS_SHOW_WARNING=true # Mostra warning de deprecação
+```
+
+DIFERENÇAS v2.0 vs v3.0:
+- v2.0: Conexões vinculadas a STORE (loja individual)
+- v3.0: Conexões vinculadas a ORGANIZATION (tenant)
+
+Código de seleção (main.py):
+```python
+if ff.oauth_v3_enabled:
+    app.include_router(oauth_v3.router, prefix="/api/auth/oauth")
+else:
+    app.include_router(oauth.router, prefix="/api/auth/oauth")
+```
+
+--------------------------------------------------------------------------------
+1.5 VERSÃO DO PYTHON
+--------------------------------------------------------------------------------
+
+RESPOSTA: Python 3.11
+
+EVIDÊNCIA (Dockerfile):
+```dockerfile
+FROM python:3.11-slim
+```
+
+COMPATIBILIDADE:
+- Suporta: Python 3.10+ (devido ao uso de type hints modernos)
+- Recomendado: Python 3.11 (melhor performance, error messages)
+- Bibliotecas: 175 dependências em requirements.txt
+
+RECURSOS PYTHON 3.11 UTILIZADOS:
+- Type hints com | para Union
+- AsyncGenerator typing
+- Exception groups (try/except*)
+- Self type para classes
+- tomllib nativo
+
+--------------------------------------------------------------------------------
+1.6 REACT NATIVE - EXPO OU CLI?
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO É REACT NATIVE - É REACT WEB
+
+O projeto é uma APLICAÇÃO WEB (Single Page Application), não um app mobile nativo.
+
+EVIDÊNCIAS:
+- Framework: Vite (não Expo ou Metro)
+- DOM manipulation: ReactDOM.render
+- Routing: react-router-dom (não React Navigation)
+- Styling: TailwindCSS (não NativeWind)
+- Build: yarn build para static files
+
+package.json:
+```json
+{
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",      // Web DOM
+    "react-router-dom": "^6.21.2" // Web routing
+  },
+  "devDependencies": {
+    "vite": "^5.0.11"            // Web bundler
+  }
+}
+```
+
+DESIGN MOBILE-FIRST:
+- O sistema tem design RESPONSIVO otimizado para mobile
+- Arquivo: /frontend/MOBILE_DESIGN_SPECIFICATION.md
+- CSS: /frontend/src/styles/mobile-optimizations.css
+- Mas NÃO É um app nativo
+
+SE PRECISAR CRIAR APP REACT NATIVE:
+Recomendação: Expo (mais rápido para começar)
+```bash
+npx create-expo-app NexoProMobile
+cd NexoProMobile
+npx expo start
+```
+
+--------------------------------------------------------------------------------
+1.7 TYPESCRIPT EM TODOS OS PROJETOS?
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - 100% TypeScript no Frontend
+
+MÉTRICAS:
+- Total arquivos .ts/.tsx: 241
+- Total linhas TypeScript: 39.260
+- Cobertura: 100% do frontend
+
+CONFIGURAÇÃO (tsconfig.json):
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "strict": true,               // Strict mode habilitado
+    "noImplicitAny": true,
+    "strictNullChecks": true
+  }
+}
+```
+
+TIPAGEM:
+- Types personalizados: /src/types/ (12 arquivos)
+- Tipos 'any' restantes: 161 (meta: <30) - débito técnico
+
+ARQUIVOS DE TIPOS:
+```
+/frontend/src/types/
+├── aiConfig.ts      - Configuração IA
+├── analytics.ts     - Métricas (142 linhas)
+├── auditLogs.ts     - Logs de auditoria
+├── automation.ts    - Regras automação
+├── comment.ts       - Comentários (185 linhas)
+├── enums.ts         - Enumerações
+├── index.ts         - Barrel export
+├── notification.ts  - Notificações
+├── oauth.ts         - OAuth (71 linhas)
+├── permission.ts    - Permissões
+├── role.ts          - Perfis
+├── store.ts         - Lojas (115 linhas)
+├── template.ts      - Templates
+└── user.ts          - Usuários
+```
+
+--------------------------------------------------------------------------------
+1.8 GERENCIADOR DE PACOTES PREFERIDO
+--------------------------------------------------------------------------------
+
+RESPOSTA: YARN
+
+EVIDÊNCIAS:
+- Arquivo yarn.lock presente (não package-lock.json no git)
+- Scripts usando yarn em documentação
+- Node engines: >=18.0.0
+
+package.json:
+```json
+{
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
+```
+
+COMANDOS PADRÃO:
+```bash
+yarn install          # Instalar dependências
+yarn dev             # Desenvolvimento
+yarn build           # Build produção
+yarn test            # Executar testes
+yarn lint            # Linting
+```
+
+NOTA: package-lock.json existe mas deve ser removido (conflito detectado)
+
+--------------------------------------------------------------------------------
+1.9 AMBIENTES VIRTUAIS PYTHON
+--------------------------------------------------------------------------------
+
+RESPOSTA: DOCKER É O AMBIENTE PRINCIPAL
+
+O projeto usa DOCKER como ambiente de isolamento, não venv/conda/poetry.
+
+CONFIGURAÇÃO:
+- Dockerfile para backend e frontend
+- docker-compose.yml para orquestração
+- Dependências: requirements.txt (não poetry.lock ou Pipfile)
+
+PARA DESENVOLVIMENTO LOCAL SEM DOCKER:
+```bash
+cd /app/backend
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+pip install -r requirements.txt
+```
+
+ARQUIVO requirements.txt:
+- 175 dependências listadas
+- Versões fixadas para reprodutibilidade
+- Separação: requirements.txt (prod) + requirements-dev.txt (dev)
+
+--------------------------------------------------------------------------------
+1.10 DOCKER PARA DESENVOLVIMENTO
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - Docker Compose Completo
+
+SERVIÇOS DEFINIDOS (docker-compose.yml):
+
+1. postgresql (postgres:15-alpine)
+   - Container: nexopro-postgresql
+   - Porta: 5432
+   - Memória: 256MB-512MB
+   - Config: shared_buffers=128MB, max_connections=100
+
+2. mongodb (mongo:6.0)
+   - Container: nexopro-mongodb
+   - Memória: 512MB-1GB
+   - Config: wiredTigerCacheSizeGB=0.5
+
+3. backend (custom FastAPI)
+   - Container: nexopro-backend
+   - Porta: 8000
+   - Memória: 512MB-1200MB
+   - Workers: 2
+
+4. frontend (custom React/Nginx)
+   - Container: nexopro-frontend
+   - Porta: 80 (interno)
+   - Memória: 256MB-512MB
+
+5. nginx (nginx:alpine)
+   - Container: nexopro-nginx
+   - Portas: 80, 443
+   - Memória: 128MB-256MB
+
+6. certbot (certbot/certbot)
+   - SSL auto-renewal cada 12h
+
+VOLUMES:
+- postgresql_data: /var/lib/postgresql/data
+- mongodb_data: /data/db
+- uploads_data: /app/uploads
+
+NETWORKS:
+- nexopro-net (bridge driver)
+
+COMANDOS:
+```bash
+docker-compose up -d           # Iniciar todos
+docker-compose logs -f backend # Ver logs
+docker-compose down           # Parar todos
+```
+
+================================================================================
+           PARTE 2: BANCO DE DADOS E DADOS
+================================================================================
+
+--------------------------------------------------------------------------------
+2.1 VERSÃO DO POSTGRESQL
+--------------------------------------------------------------------------------
+
+RESPOSTA: PostgreSQL 15-alpine
+
+EVIDÊNCIA (docker-compose.yml):
+```yaml
+postgresql:
+  image: postgres:15-alpine
+```
+
+CONFIGURAÇÕES:
+- shared_buffers: 128MB
+- max_connections: 100
+- User: nexopro_user
+- Database: nexopro_db
+
+CONNECTION STRING:
+```
+postgresql+asyncpg://usuario:senha@host:5432/database
+```
+
+DRIVER: asyncpg (async PostgreSQL driver)
+
+--------------------------------------------------------------------------------
+2.2 EXTENSÕES DO POSTGRESQL
+--------------------------------------------------------------------------------
+
+RESPOSTA: UUID-OSSP (mínima) - Sem extensões avançadas
+
+EXTENSÕES IDENTIFICADAS:
+1. uuid-ossp - Geração de UUIDs (migration 000_uuid_extension.py)
+
+EXTENSÕES NÃO UTILIZADAS:
+- PostGIS (geoespacial) - NÃO
+- pgvector (embeddings IA) - NÃO
+- pg_trgm (full-text search) - NÃO
+- timescaledb (time series) - NÃO
+
+OPORTUNIDADE: Se implementar busca semântica de comentários, pgvector seria útil.
+
+--------------------------------------------------------------------------------
+2.3 ORMS UTILIZADOS
+--------------------------------------------------------------------------------
+
+RESPOSTA: SQLAlchemy 2.0 (Principal) + Motor (MongoDB)
+
+1. SQLAlchemy 2.0 (PostgreSQL):
+   - Versão: 2.0.25
+   - Driver: asyncpg 0.29.0
+   - Session: async_sessionmaker
+   - Pattern: Repository Pattern
+
+Exemplo de Model:
+```python
+class Comment(Base, TimestampMixin, SoftDeleteMixin):
+    __tablename__ = "comments"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"))
+    content = Column(Text, nullable=False)
+    sentiment = Column(String(20))
+    status = Column(String(20), default="pending")
+```
+
+2. Motor (MongoDB - auxiliar):
+   - Versão: 3.3.1
+   - Uso: Dados não-relacionais (logs, eventos)
+
+Configuração Session:
+```python
+engine = create_async_engine(
+    settings.database_url,
+    pool_size=25,
+    max_overflow=15,
+    pool_timeout=30,
+    pool_recycle=3600,
+    pool_pre_ping=True
+)
+
+AsyncSessionLocal = async_sessionmaker(
+    engine,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False
+)
+```
+
+--------------------------------------------------------------------------------
+2.4 REDIS PARA CACHE/FILAS
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - Redis Multi-Purpose
+
+CONFIGURAÇÃO (.env):
+```
+REDIS_URL=redis://localhost:6379/0
+REDIS_CACHE_TTL=300  # 5 minutos
+```
+
+DATABASES REDIS:
+- DB 0: Cache geral (sessions, queries)
+- DB 2: APScheduler jobstore (distributed locking)
+
+USOS:
+1. Cache de queries analytics
+2. Rate limiting (slowapi)
+3. Session storage
+4. Job scheduling (APScheduler RedisJobStore)
+5. Distributed locking (prevent duplicate job execution)
+
+Código Redis client:
+```python
+from src.infrastructure.cache.redis_client import get_redis_client
+
+redis = get_redis_client()
+await redis.set("key", "value", ex=300)
+value = await redis.get("key")
+```
+
+--------------------------------------------------------------------------------
+2.5 MIGRATIONS DO BANCO DE DADOS
+--------------------------------------------------------------------------------
+
+RESPOSTA: ALEMBIC
+
+CONFIGURAÇÃO (alembic.ini):
+```ini
+[alembic]
+script_location = alembic
+sqlalchemy.url = postgresql+asyncpg://...
+```
+
+MIGRAÇÕES EXISTENTES (15 arquivos):
+```
+alembic/versions/
+├── 000_uuid_extension.py           - Habilitar UUID
+├── 001_initial_schema.py           - Schema inicial (11.488 bytes)
+├── 002_complete_schema.py          - Schema completo (28.948 bytes)
+├── 003_missing_tables.py           - Tabelas faltantes (16.924 bytes)
+├── 004_updated_at_triggers.py      - Triggers de updated_at
+├── 005_fix_ai_responses_columns.py - Fix colunas AI
+├── 006_add_wizard_skipped_at.py    - Wizard completion
+└── ... (mais 8 migrações)
+```
+
+COMANDOS:
+```bash
+# Criar nova migração
+alembic revision --autogenerate -m "descricao"
+
+# Aplicar migrações
+alembic upgrade head
+
+# Rollback
+alembic downgrade -1
+
+# Ver histórico
+alembic history
+
+# PROBLEMA ATUAL: Múltiplas heads
+alembic merge heads -m "merge_heads"
+```
+
+PROBLEMA CONHECIDO: TIMESTAMP vs TIMESTAMPTZ
+- Colunas criadas como TIMESTAMP (naive)
+- Código espera TIMESTAMPTZ (aware)
+- Causa TypeError em queries de analytics
+- Solução: Migration para converter colunas
+
+--------------------------------------------------------------------------------
+2.6 FERRAMENTAS VISUAIS PARA BANCO
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO CONFIGURADAS NO PROJETO
+
+Ferramentas recomendadas (externas):
+1. pgAdmin 4 - GUI oficial PostgreSQL
+2. DBeaver - Multi-database universal
+3. TablePlus - Mac/Windows premium
+4. DataGrip - JetBrains IDE
+
+Conexão:
+- Host: 177.153.69.60 (VPS KingHost)
+- Port: 5432
+- Database: social_media_db
+- User: socialmedia
+
+--------------------------------------------------------------------------------
+2.7 BANCOS NOSQL
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - MongoDB 6.0 Configurado
+
+docker-compose.yml:
+```yaml
+mongodb:
+  image: mongo:6.0
+  environment:
+    MONGO_INITDB_ROOT_USERNAME: nexopro_admin
+    MONGO_INITDB_ROOT_PASSWORD: NexoPro2024!Secure
+    MONGO_INITDB_DATABASE: nexopro_db
+```
+
+USO ATUAL:
+- Logs de eventos
+- Dados não-estruturados
+- Cache de respostas IA
+
+DRIVER: Motor 3.3.1 (async MongoDB driver)
+
+--------------------------------------------------------------------------------
+2.8 VOLUMES DE ARQUIVOS (PDFs, IMAGENS)
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - Volume Docker para Uploads
+
+CONFIGURAÇÃO:
+```yaml
+volumes:
+  - uploads_data:/app/uploads
+```
+
+TIPOS DE ARQUIVOS:
+- Anexos de comentários (images)
+- Exports (CSV, PDF)
+- Logs arquivados
+
+TAMANHO ESTIMADO: Não especificado (depende do uso)
+
+--------------------------------------------------------------------------------
+2.9 ARMAZENAMENTO DE ARQUIVOS
+--------------------------------------------------------------------------------
+
+RESPOSTA: LOCAL (Docker Volume) + Preparado para S3
+
+ATUAL: Volume Docker local
+```yaml
+uploads_data: /app/uploads
+```
+
+PREPARADO PARA S3 (dependências instaladas):
+```
+boto3==1.42.6
+botocore==1.42.6
+s3transfer==0.16.0
+```
+
+MIGRAÇÃO PARA S3:
+1. Configurar AWS credentials
+2. Criar bucket S3
+3. Implementar upload service
+4. Migrar arquivos existentes
+
+--------------------------------------------------------------------------------
+2.10 SEEDS AUTOMÁTICOS
+--------------------------------------------------------------------------------
+
+RESPOSTA: PARCIAL - Scripts de Inicialização
+
+SCRIPTS IDENTIFICADOS:
+```
+/backend/create_schema_complete.py
+/backend/create_schema_sqlalchemy.py
+/backend/scripts/seed_historical_data_arima.py
+```
+
+FIXTURE DE TESTES (conftest.py):
+```python
+from scripts.seed_historical_data_arima import seed_historical_data
+
+@pytest_asyncio.fixture
+async def seed_arima_data(test_db):
+    await seed_historical_data(test_db, days=30)
+```
+
+RECOMENDAÇÃO: Implementar seed_database.py com dados iniciais:
+- Organização padrão
+- Usuário admin
+- Roles e Permissions
+- Templates de resposta
+
+================================================================================
+           PARTE 3: MOBILE (REACT NATIVE)
+================================================================================
+
+IMPORTANTE: O projeto atual NÃO É React Native, é React Web.
+As respostas abaixo são RECOMENDAÇÕES caso você desenvolva um app mobile.
+
+--------------------------------------------------------------------------------
+3.1 PLATAFORMAS (Android/iOS)
+--------------------------------------------------------------------------------
+
+RECOMENDAÇÃO: Ambos (Android + iOS)
+
+React Native permite desenvolvimento para ambas plataformas com código compartilhado.
+Expo simplifica o processo para ambas.
+
+--------------------------------------------------------------------------------
+3.2 EMULADORES ANDROID NO LINUX
+--------------------------------------------------------------------------------
+
+RECOMENDAÇÃO: SIM - Android Studio + KVM
+
+Setup para Linux:
+```bash
+# Instalar KVM (aceleração hardware)
+sudo apt install qemu-kvm libvirt-daemon-system
+
+# Baixar Android Studio
+# https://developer.android.com/studio
+
+# Criar AVD (Android Virtual Device)
+# Tools > AVD Manager > Create Virtual Device
+```
+
+Alternativa: Expo Go (app físico, sem emulador)
+
+--------------------------------------------------------------------------------
+3.3 NOTIFICAÇÕES PUSH
+--------------------------------------------------------------------------------
+
+RECOMENDAÇÃO: SIM - Firebase Cloud Messaging (FCM)
+
+Opções:
+1. Firebase Cloud Messaging (FCM) - Ambas plataformas
+2. Expo Notifications - Se usar Expo
+3. Apple Push Notification (APNs) - iOS nativo
+
+Setup Expo:
+```bash
+expo install expo-notifications
+```
+
+--------------------------------------------------------------------------------
+3.4 INTEGRAÇÃO COM MAPAS/GPS
+--------------------------------------------------------------------------------
+
+RECOMENDAÇÃO: react-native-maps
+
+```bash
+npm install react-native-maps
+```
+
+Features:
+- Google Maps (Android)
+- Apple Maps (iOS)
+- Markers, Polylines
+- Geolocation
+
+Uso com stores do NEXOPRO: Mostrar localização das lojas.
+
+--------------------------------------------------------------------------------
+3.5 BIOMETRIA E CÂMERA
+--------------------------------------------------------------------------------
+
+RECOMENDAÇÃO: Expo SDK
+
+Biometria:
+```bash
+expo install expo-local-authentication
+```
+
+Câmera:
+```bash
+expo install expo-camera
+expo install expo-image-picker
+```
+
+--------------------------------------------------------------------------------
+3.6 DEPLOY DE TESTE
+--------------------------------------------------------------------------------
+
+RECOMENDAÇÃO: Expo Go (mais fácil)
+
+Opções:
+1. Expo Go - Scan QR code, teste instantâneo
+2. TestFlight - iOS beta testing
+3. APK direto - Android sideload
+4. Firebase App Distribution - Ambas plataformas
+
+```bash
+# Expo
+expo start
+
+# Build APK
+eas build --platform android --profile preview
+```
+
+--------------------------------------------------------------------------------
+3.7 BIBLIOTECAS DE ESTILO
+--------------------------------------------------------------------------------
+
+RECOMENDAÇÃO: NativeWind (Tailwind para RN)
+
+Mantém consistência com frontend web (TailwindCSS).
+
+```bash
+npm install nativewind
+npm install --dev tailwindcss
+```
+
+Alternativas:
+- Styled Components
+- React Native Paper
+- Tamagui
+
+--------------------------------------------------------------------------------
+3.8 INTEGRAÇÃO COM PAGAMENTOS
+--------------------------------------------------------------------------------
+
+RECOMENDAÇÃO: Stripe (já configurado no backend)
+
+```bash
+npm install @stripe/stripe-react-native
+```
+
+O backend já tem suporte a:
+- Stripe (via API)
+- Webhook de pagamentos
+
+--------------------------------------------------------------------------------
+3.9 DEEP LINKING
+--------------------------------------------------------------------------------
+
+RECOMENDAÇÃO: Expo Linking + React Navigation
+
+```bash
+expo install expo-linking
+```
+
+Configurar URLs universais:
+- nexopro://comments/123
+- nexopro://stores/456
+
+--------------------------------------------------------------------------------
+3.10 FUNCIONAMENTO OFFLINE
+--------------------------------------------------------------------------------
+
+RECOMENDAÇÃO: AsyncStorage + React Query
+
+```bash
+expo install @react-native-async-storage/async-storage
+```
+
+Estratégia:
+1. Cache local com AsyncStorage
+2. Sync quando online
+3. Queue de ações offline
+4. Conflict resolution
+
+================================================================================
+           PARTE 4: INTELIGÊNCIA ARTIFICIAL E AGENTES
+================================================================================
+
+--------------------------------------------------------------------------------
+4.1 TAREFAS PARA IA EXECUTAR
+--------------------------------------------------------------------------------
+
+TAREFAS JÁ IMPLEMENTADAS NO NEXOPRO:
+
+1. Geração de Respostas Automáticas (OpenAI GPT-4o)
+   - Arquivo: ai_responses/generate_response_use_case.py
+   - Entrada: Comentário + contexto da loja
+   - Saída: Resposta personalizada
+
+2. Análise de Sentimento
+   - Arquivo: sentiment_analysis_service.py
+   - Classificação: positive, negative, neutral
+   - Confiança: 0-100%
+
+3. Priorização Inteligente de Comentários
+   - Arquivo: priority_recalculation_job.py
+   - Fatores: sentimento, tempo, engajamento
+   - Score: 0-100
+
+4. Previsão de Volume (ARIMA)
+   - Arquivo: predictive_analytics_service_v2.py
+   - Previsão de comentários futuros
+   - Horizonte: 7-30 dias
+
+5. Auto-Aprovação de Respostas
+   - Arquivo: auto_approve_use_case.py
+   - Baseado em score de confiança
+
+SUGESTÕES PARA CURSOR/ANTIGRAVITY:
+
+1. Auditoria de Segurança
+   - Scan de vulnerabilidades
+   - Análise de dependências
+   - Code review automatizado
+
+2. Otimização de Consultas SQL
+   - Identificar N+1 queries
+   - Sugerir índices
+   - Analisar EXPLAIN plans
+
+3. Geração de Testes
+   - Unit tests para use cases
+   - Integration tests para APIs
+   - E2E tests para fluxos críticos
+
+4. Documentação Automática
+   - JSDoc/Docstrings
+   - README updates
+   - API changelog
+
+--------------------------------------------------------------------------------
+4.2 IA PARA ESCREVER CÓDIGO
+--------------------------------------------------------------------------------
+
+RECOMENDAÇÃO: MODO ASSISTIDO (sugerir trechos)
+
+Dado a complexidade da arquitetura Clean Architecture, é melhor:
+- Sugestões de código, não código completo
+- Revisão humana obrigatória
+- Seguir padrões existentes
+
+RAZÕES:
+1. Arquitetura complexa (4 camadas)
+2. Convenções específicas (organization_id obrigatório)
+3. Tipagem rigorosa (TypeScript strict)
+4. Padrões de teste específicos
+
+--------------------------------------------------------------------------------
+4.3 CHAVES DE API
+--------------------------------------------------------------------------------
+
+CHAVES CONFIGURADAS:
+
+1. OpenAI ✅
+   ```
+   OPENAI_API_KEY=sk-proj-xxx
+   ```
+   - Uso: Geração de respostas, análise de sentimento
+   - Modelo: GPT-4o
+
+2. Anthropic ⚠️ (vazio)
+   ```
+   ANTHROPIC_API_KEY=
+   ```
+   - Preparado mas não configurado
+
+3. Google Gemini ⚠️ (vazio)
+   ```
+   GOOGLE_GEMINI_API_KEY=
+   ```
+   - Preparado mas não configurado
+
+CUSTOS CONFIGURADOS (cost_calculator.py):
+```python
+PRICING = {
+    "openai": {
+        "gpt-4o": {"input": 0.0025, "output": 0.010},
+        "gpt-4o-mini": {"input": 0.00015, "output": 0.0006}
+    },
+    "google_gemini": {
+        "gemini-2.5-pro": {"input": 0.00125, "output": 0.005},
+        "gemini-2.5-flash": {"input": 0.000075, "output": 0.0003}
+    },
+    "anthropic": {
+        "claude-3-opus": {"input": 0.015, "output": 0.075},
+        "claude-3-sonnet": {"input": 0.003, "output": 0.015}
+    }
+}
+```
+
+--------------------------------------------------------------------------------
+4.4 TESTES UNITÁRIOS AUTOMÁTICOS
+--------------------------------------------------------------------------------
+
+RESPOSTA: FRAMEWORK PRESENTE, COBERTURA BAIXA
+
+FRAMEWORK:
+```
+pytest==8.4.2
+pytest-asyncio==0.24.0
+pytest-cov==7.0.0
+pytest-mock==3.15.1
+```
+
+ESTRUTURA DE TESTES:
+```
+/backend/tests/
+├── unit/              - Testes unitários
+├── integration/       - Testes de integração
+├── e2e/              - Testes end-to-end
+├── load/             - Testes de carga
+├── regression/       - Testes de regressão
+├── chaos/            - Chaos engineering
+└── fixtures/         - Dados de teste
+```
+
+PROBLEMA ATUAL:
+- 33/36 arquivos de teste falhando (91.7%)
+- httpx não estava instalado
+- Markers não registrados
+
+RECOMENDAÇÃO PARA IA:
+- Gerar testes para cada novo use case
+- Template padrão:
+```python
+@pytest.mark.asyncio
+async def test_use_case_success(db_session):
+    # Arrange
+    use_case = MyUseCase(repository)
+    
+    # Act
+    result = await use_case.execute(input_dto)
+    
+    # Assert
+    assert result.success is True
+```
+
+--------------------------------------------------------------------------------
+4.5 DOCUMENTAÇÃO AUTOMÁTICA
+--------------------------------------------------------------------------------
+
+RESPOSTA: PARCIAL - OpenAPI + Docs Manuais
+
+IMPLEMENTADO:
+1. OpenAPI/Swagger
+   - Endpoint: /docs
+   - Gerado automaticamente pelo FastAPI
+   - Schemas Pydantic documentados
+
+2. ReDoc
+   - Endpoint: /redoc
+   - Documentação alternativa
+
+NÃO IMPLEMENTADO:
+- JSDoc para frontend (parcial)
+- Docstrings consistentes (parcial)
+- README atualizado (desatualizado)
+
+RECOMENDAÇÃO:
+- Configurar ESLint rule para JSDoc obrigatório
+- Usar Sphinx para documentação Python
+- GitHub Actions para gerar docs
+
+--------------------------------------------------------------------------------
+4.6 MODELOS DE IA LOCAIS (LLAMA 3 + RYZEN AI NPU)
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO CONFIGURADO
+
+O sistema atual usa apenas APIs cloud (OpenAI).
+
+PARA IMPLEMENTAR MODELOS LOCAIS:
+
+Opção 1: Ollama
+```bash
+# Instalar Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Baixar Llama 3
+ollama pull llama3
+
+# Usar via API
+curl http://localhost:11434/api/generate -d '{
+  "model": "llama3",
+  "prompt": "Responda ao comentário..."
+}'
+```
+
+Opção 2: llama.cpp (mais controle)
+```bash
+git clone https://github.com/ggerganov/llama.cpp
+cd llama.cpp
+make
+./main -m models/llama-3-8b.gguf -p "Prompt aqui"
+```
+
+Opção 3: vLLM (alta performance)
+```bash
+pip install vllm
+python -m vllm.entrypoints.openai.api_server --model meta-llama/Llama-3-8b
+```
+
+RYZEN AI NPU:
+- Requer drivers AMD XDNA
+- Suporte via DirectML ou ONNX Runtime
+- Ainda em fase experimental
+
+--------------------------------------------------------------------------------
+4.7 COMMITS AUTOMÁTICOS
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO RECOMENDADO
+
+RAZÕES:
+1. Risco de commits com código quebrado
+2. Histórico git poluído
+3. Dificuldade de code review
+4. Problemas de CI/CD
+
+ALTERNATIVA RECOMENDADA:
+- IA sugere commit message
+- Humano revisa e confirma
+- Pre-commit hooks para validação
+
+--------------------------------------------------------------------------------
+4.8 MONITORAMENTO DE ERROS EM TEMPO REAL
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - SENTRY CONFIGURADO
+
+CONFIGURAÇÃO (.env):
+```
+SENTRY_DSN=https://xxx@sentry.io/xxx
+SENTRY_ENVIRONMENT=production
+SENTRY_TRACES_SAMPLE_RATE=1.0
+```
+
+FEATURES:
+- Error tracking automático
+- Performance monitoring
+- User context (user_id, organization_id)
+- Breadcrumbs para debug
+- Alertas configuráveis
+
+CÓDIGO (sentry_config.py):
+```python
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+
+def configure_sentry():
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.sentry_environment,
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+        integrations=[FastApiIntegration()]
+    )
+```
+
+RECOMENDAÇÃO PARA IA:
+- Integrar Sentry alerts com Slack/Discord
+- Criar issues automáticas no GitHub
+- Sugerir fixes baseado em stack trace
+
+--------------------------------------------------------------------------------
+4.9 PROMPTS/PERSONAS
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - SISTEMA DE TEMPLATES
+
+IMPLEMENTAÇÃO:
+- Tabela: templates
+- Model: Template (template.py)
+- API: /api/v1/templates
+
+CAMPOS:
+```python
+class Template(Base):
+    id: UUID
+    organization_id: UUID
+    name: str
+    content: str           # Template com placeholders
+    category: str          # greeting, complaint, praise
+    variables: JSON        # {customer_name}, {store_name}
+    is_active: bool
+```
+
+EXEMPLO DE TEMPLATE:
+```
+Olá {customer_name}! 
+
+Obrigado pelo seu feedback sobre nossa loja {store_name}. 
+{response_content}
+
+Atenciosamente,
+Equipe {organization_name}
+```
+
+PROMPTS PARA IA:
+- Configuráveis por organização
+- Stored em ai_configs
+- Ajustáveis por store
+
+--------------------------------------------------------------------------------
+4.10 DIAGRAMAS AUTOMÁTICOS
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO IMPLEMENTADO
+
+RECOMENDAÇÃO:
+
+1. Mermaid (Markdown-based)
+```mermaid
+graph TD
+    A[Frontend] --> B[API Gateway]
+    B --> C[FastAPI]
+    C --> D[PostgreSQL]
+    C --> E[Redis]
+```
+
+2. Excalidraw (colaborativo)
+- Integração via API
+- Export para PNG/SVG
+
+3. PlantUML (código)
+```plantuml
+@startuml
+class Comment {
+  +id: UUID
+  +content: String
+  +sentiment: String
+}
+@enduml
+```
+
+4. Structurizr (C4 Model)
+- Diagramas de arquitetura
+- Documentação como código
+
+================================================================================
+           PARTE 5: DEVOPS E INFRAESTRUTURA
+================================================================================
+
+--------------------------------------------------------------------------------
+5.1 REPOSITÓRIO (GITHUB/GITLAB/BITBUCKET)
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO ESPECIFICADO NO PROJETO
+
+O projeto tem arquivos .git mas não há configuração de remote visível.
+
+RECOMENDAÇÃO: GitHub
+- GitHub Actions para CI/CD
+- GitHub Packages para Docker images
+- Dependabot para segurança
+
+--------------------------------------------------------------------------------
+5.2 GITHUB ACTIONS
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO CONFIGURADO
+
+ESTRUTURA RECOMENDADA:
+```
+.github/
+└── workflows/
+    ├── ci.yml           # Lint + Test
+    ├── cd.yml           # Deploy
+    ├── security.yml     # Dependency scan
+    └── release.yml      # Versioning
+```
+
+EXEMPLO ci.yml:
+```yaml
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: pytest --cov
+```
+
+--------------------------------------------------------------------------------
+5.3 CLOUD UTILIZADA
+--------------------------------------------------------------------------------
+
+RESPOSTA: VPS KINGHOST (Dedicado)
+
+CONFIGURAÇÃO:
+- Host: nexopro-mobile.vps-kinghost.net
+- IP: 177.153.69.60
+- PostgreSQL: Porta 5432
+- Deploy: Manual via Docker
+
+NÃO UTILIZA:
+- AWS
+- Google Cloud
+- Azure
+- DigitalOcean
+
+PARA ESCALAR:
+1. DigitalOcean (custo-benefício)
+2. AWS ECS (enterprise)
+3. Google Cloud Run (serverless)
+
+--------------------------------------------------------------------------------
+5.4 AMBIENTE DE STAGING
+--------------------------------------------------------------------------------
+
+RESPOSTA: PARCIAL - Emergent Preview
+
+CONFIGURAÇÃO:
+```
+VITE_API_BASE_URL=https://netconnect-23.preview.emergentagent.com
+```
+
+CORS configurado para aceitar:
+- *.preview.emergentagent.com
+
+RECOMENDAÇÃO:
+- Criar ambiente staging dedicado
+- Banco separado
+- Feature flags para teste
+
+--------------------------------------------------------------------------------
+5.5 GERENCIAMENTO DE VARIÁVEIS DE AMBIENTE
+--------------------------------------------------------------------------------
+
+RESPOSTA: ARQUIVOS .env LOCAIS
+
+ARQUIVOS:
+- /backend/.env (125+ linhas)
+- /frontend/.env (15+ linhas)
+
+SEGURANÇA:
+- .env no .gitignore
+- Secrets não commitados
+- Encryption key para dados sensíveis
+
+PROBLEMA: 54 variáveis desalinhadas entre .env e código
+
+RECOMENDAÇÃO:
+1. Criar .env.example com todas variáveis
+2. Validar na startup (já implementado parcialmente)
+3. Usar secrets manager em produção:
+   - AWS Secrets Manager
+   - HashiCorp Vault
+   - Doppler
+
+--------------------------------------------------------------------------------
+5.6 FERRAMENTAS DE LOG
+--------------------------------------------------------------------------------
+
+RESPOSTA: SENTRY + STRUCTLOG
+
+1. SENTRY (Error Tracking)
+   ```
+   sentry-sdk==1.40.0
+   SENTRY_DSN=https://xxx@sentry.io/xxx
+   ```
+
+2. STRUCTLOG (Structured Logging)
+   ```
+   structlog==24.1.0
+   ```
+
+Exemplo de log estruturado:
+```python
+logger.info(
+    "comment_processed",
+    comment_id=str(comment.id),
+    sentiment=comment.sentiment,
+    processing_time_ms=elapsed
+)
+```
+
+OUTPUT:
+```json
+{
+  "event": "comment_processed",
+  "comment_id": "abc-123",
+  "sentiment": "positive",
+  "processing_time_ms": 45,
+  "timestamp": "2025-01-08T12:00:00Z"
+}
+```
+
+--------------------------------------------------------------------------------
+5.7 MONITORAMENTO DE PERFORMANCE (APM)
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - PROMETHEUS + CUSTOM METRICS
+
+CONFIGURAÇÃO:
+```python
+prometheus-client==0.19.0
+```
+
+ENDPOINT: /metrics
+
+MÉTRICAS COLETADAS:
+- Request latency
+- Request count
+- Error rate
+- Database connection pool
+- Redis operations
+- AI response time
+
+Código (prometheus_metrics.py):
+```python
+from prometheus_client import Counter, Histogram
+
+request_count = Counter('http_requests_total', 'Total HTTP requests')
+request_latency = Histogram('http_request_duration_seconds', 'Request latency')
+```
+
+--------------------------------------------------------------------------------
+5.8 FLUXO DE BRANCH
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO ESPECIFICADO
+
+RECOMENDAÇÃO: GitFlow
+
+```
+main (production)
+  │
+  └── develop (staging)
+        │
+        ├── feature/xxx
+        ├── bugfix/xxx
+        └── hotfix/xxx
+```
+
+ALTERNATIVA: Trunk-Based Development
+- Commits direto em main
+- Feature flags para WIP
+- Deploy contínuo
+
+--------------------------------------------------------------------------------
+5.9 SSL LOCAL (HTTPS)
+--------------------------------------------------------------------------------
+
+RESPOSTA: CERTBOT EM PRODUÇÃO, NÃO LOCAL
+
+PRODUÇÃO:
+```yaml
+certbot:
+  image: certbot/certbot
+  # Auto-renewal cada 12h
+```
+
+LOCAL:
+- HTTP (localhost:3000, localhost:8001)
+- Sem SSL
+
+PARA SSL LOCAL:
+```bash
+# mkcert
+mkcert -install
+mkcert localhost 127.0.0.1
+
+# Configurar Vite
+vite.config.ts:
+server: {
+  https: {
+    key: fs.readFileSync('./localhost-key.pem'),
+    cert: fs.readFileSync('./localhost.pem')
+  }
+}
+```
+
+--------------------------------------------------------------------------------
+5.10 AUTENTICAÇÃO VIA TERCEIROS
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - OAuth Completo
+
+PROVEDORES CONFIGURADOS:
+
+1. Facebook Login
+   ```
+   FACEBOOK_APP_ID=25072537925733797
+   FACEBOOK_APP_SECRET=xxx
+   ```
+
+2. Instagram (via Facebook)
+   ```
+   INSTAGRAM_APP_ID=25072537925733797
+   ```
+
+3. Google OAuth
+   ```
+   GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=GOCSPX-xxx
+   ```
+
+NÃO CONFIGURADOS:
+- Apple Sign-In
+- Twitter/X
+- LinkedIn
+- Microsoft
+
+FLUXO OAuth v3.0:
+1. Frontend chama /api/auth/oauth/v3/{provider}/init
+2. Backend gera state + redirect URL
+3. Usuário autoriza no provedor
+4. Callback em /api/auth/oauth/v3/{provider}/callback
+5. Backend troca code por access_token
+6. Retorna JWT para frontend
+
+================================================================================
+           PARTE 6: FERRAMENTAS E INTERFACE
+================================================================================
+
+--------------------------------------------------------------------------------
+6.1 FERRAMENTAS DE DESIGN (FIGMA)
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO CONFIGURADAS NO PROJETO
+
+O projeto tem:
+- Design tokens em JSON (/frontend/src/config/design-tokens.json)
+- Especificação mobile (/frontend/MOBILE_DESIGN_SPECIFICATION.md)
+- Cores e espaçamentos definidos
+
+RECOMENDAÇÃO: Figma
+- Design system compartilhado
+- Componentes reutilizáveis
+- Handoff para desenvolvedores
+
+--------------------------------------------------------------------------------
+6.2 TERMINAL PREFERIDO
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO ESPECIFICADO
+
+O projeto não tem preferência de terminal.
+
+RECOMENDAÇÕES:
+1. Cursor integrado (conveniente)
+2. Alacritty (performance)
+3. iTerm2 (Mac)
+4. Windows Terminal (Windows)
+
+--------------------------------------------------------------------------------
+6.3 FONTES COM LIGADURAS
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO ESPECIFICADO
+
+RECOMENDAÇÕES:
+1. Fira Code (ligaduras completas)
+2. JetBrains Mono (clean)
+3. Cascadia Code (Microsoft)
+4. Victor Mono (cursiva)
+
+--------------------------------------------------------------------------------
+6.4 ACESSIBILIDADE (WCAG)
+--------------------------------------------------------------------------------
+
+RESPOSTA: PARCIAL - Em desenvolvimento
+
+IMPLEMENTADO:
+- CSS de acessibilidade (/styles/accessibility.css)
+- Alguns aria-labels
+
+MÉTRICAS:
+- aria-labels: 26% (75/286 botões)
+- data-testid: 0% (286 elementos faltando)
+
+RECOMENDAÇÃO:
+- Implementar WCAG 2.1 AA
+- Audit com axe-core
+- Testes com screen readers
+
+--------------------------------------------------------------------------------
+6.5 FERRAMENTAS DE TESTE DE CARGA
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - TESTES DE CARGA PRESENTES
+
+ARQUIVO: /backend/tests/load/test_100_comments_load.py
+
+FERRAMENTAS RECOMENDADAS:
+1. Locust (Python)
+2. k6 (JavaScript)
+3. Artillery (Node.js)
+4. Apache JMeter
+
+EXEMPLO Locust:
+```python
+from locust import HttpUser, task
+
+class NexoProUser(HttpUser):
+    @task
+    def get_comments(self):
+        self.client.get("/api/v1/comments")
+```
+
+--------------------------------------------------------------------------------
+6.6 LINTERS
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - RIGOROSOS
+
+BACKEND (Python):
+```
+flake8==7.3.0      # Style checker
+black==25.9.0      # Code formatter
+isort==7.0.0       # Import sorter
+mypy==1.18.2       # Type checker
+```
+
+FRONTEND (TypeScript):
+```json
+"eslint": "^8.56.0",
+"@typescript-eslint/eslint-plugin": "^6.19.0",
+"@typescript-eslint/parser": "^6.19.0",
+"prettier": "^3.2.4"
+```
+
+COMANDOS:
+```bash
+# Backend
+flake8 src/
+black src/ --check
+mypy src/
+
+# Frontend
+yarn lint
+yarn format:check
+yarn type-check
+```
+
+--------------------------------------------------------------------------------
+6.7 AUTOMAÇÃO DE README/DOCUMENTAÇÃO
+--------------------------------------------------------------------------------
+
+RESPOSTA: PARCIAL
+
+IMPLEMENTADO:
+- OpenAPI automático (/docs)
+- Docstrings (parciais)
+
+NÃO IMPLEMENTADO:
+- README generator
+- Changelog automático
+- Release notes
+
+RECOMENDAÇÃO:
+- standard-version para changelog
+- readme-md-generator
+- typedoc para TypeScript docs
+
+--------------------------------------------------------------------------------
+6.8 POSTMAN/INSOMNIA
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO CONFIGURADO
+
+ALTERNATIVA: Swagger UI em /docs
+
+RECOMENDAÇÃO:
+- Exportar OpenAPI spec
+- Importar no Postman
+- Criar collections por feature
+
+```bash
+# Exportar spec
+curl http://localhost:8001/openapi.json > openapi.json
+```
+
+--------------------------------------------------------------------------------
+6.9 WHATSAPP/TELEGRAM API
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO IMPLEMENTADO
+
+O sistema foca em:
+- Facebook
+- Instagram
+- Google Business
+
+PARA IMPLEMENTAR WHATSAPP:
+1. WhatsApp Business API
+2. Twilio API
+3. MessageBird
+
+PARA IMPLEMENTAR TELEGRAM:
+```python
+pip install python-telegram-bot
+
+from telegram import Bot
+bot = Bot(token="xxx")
+await bot.send_message(chat_id, text)
+```
+
+--------------------------------------------------------------------------------
+6.10 SISTEMAS DE FILAS
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - CELERY + APSCHEDULER
+
+CELERY (configurado mas opcional):
+```
+celery==5.3.4
+kombu==5.6.0
+CELERY_BROKER_URL=  # Vazio no .env
+```
+
+APSCHEDULER (em uso ativo):
+```python
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+scheduler = AsyncIOScheduler()
+scheduler.add_job(
+    func=process_comments,
+    trigger="interval",
+    seconds=60
+)
+```
+
+JOBS ATIVOS:
+1. google_token_refresh_daily (3AM UTC)
+2. priority_recalculation (hourly)
+3. comment_sync_job (hourly)
+4. notification_job (9AM UTC)
+5. outbox_processor (60s)
+6. quota_reset_daily (00:05 UTC)
+7. integrity_validation (6h)
+
+================================================================================
+           PARTE 7: NEGÓCIO E CONTEXTO
+================================================================================
+
+--------------------------------------------------------------------------------
+7.1 VOLUME DE USUÁRIOS ESPERADO
+--------------------------------------------------------------------------------
+
+RESPOSTA: 100-500 USUÁRIOS CONCORRENTES
+
+EVIDÊNCIA (configuração):
+```
+RATE_LIMIT_PER_MINUTE=100
+RATE_LIMIT_PER_HOUR=1000
+DATABASE_POOL_SIZE=25
+DATABASE_MAX_OVERFLOW=15
+```
+
+CAPACIDADE ESTIMADA:
+- 40 conexões simultâneas ao banco
+- 10.000 requests/hora
+- ~500 usuários ativos simultâneos
+
+PARA ESCALAR:
+1. Aumentar pool_size
+2. Adicionar read replicas
+3. Implementar sharding (preparado)
+4. CDN para assets
+
+--------------------------------------------------------------------------------
+7.2 REQUISITOS LGPD
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - IMPLEMENTADO
+
+FEATURES LGPD:
+1. Multi-tenancy (isolamento de dados)
+2. Audit logs (rastreabilidade)
+3. Soft delete (não apaga dados permanentemente)
+4. Encryption (ENCRYPTION_KEY para dados sensíveis)
+5. Consent management (OAuth scopes)
+
+DOCUMENTAÇÃO:
+- OpenAPI description: "LGPD/GDPR compliant"
+
+MELHORIAS RECOMENDADAS:
+- Data export (direito de portabilidade)
+- Data deletion request
+- Privacy policy versioning
+- Cookie consent
+
+--------------------------------------------------------------------------------
+7.3 DASHBOARDS ADMINISTRATIVOS
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - IMPLEMENTADOS
+
+PÁGINAS:
+```
+/frontend/src/pages/dashboard/DashboardPage.tsx
+/frontend/src/components/admin/TenantAnalyticsDashboard.tsx
+/frontend/src/pages/audit-logs/AuditLogsPage.tsx
+/frontend/src/pages/reports/ReportsPage.tsx
+```
+
+FEATURES:
+- Overview analytics
+- Gráficos de tendência
+- Heatmaps de atividade
+- Logs de auditoria
+- Métricas de automação
+- Previsão de volume (ARIMA)
+
+--------------------------------------------------------------------------------
+7.4 SISTEMAS MULTITENANT
+--------------------------------------------------------------------------------
+
+RESPOSTA: SIM - Implementado por Organization
+
+MODELO:
+```
+Organization (tenant root)
+  └── Users
+  └── Stores
+  └── Social Pages
+  └── Comments
+  └── AI Configs
+  └── Templates
+```
+
+IMPLEMENTAÇÃO:
+- Coluna organization_id em TODAS as tabelas
+- Filter obrigatório em queries
+- Cobertura atual: 43% (14/32 repositories)
+
+PROBLEMA: 18 repositories sem filtro organization_id
+PRIORIDADE: P0 (crítico para segurança)
+
+--------------------------------------------------------------------------------
+7.5 INTEGRAÇÃO COM ERPs/NOTA FISCAL
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO IMPLEMENTADO
+
+O sistema foca em gestão de comentários, não tem integração com:
+- ERPs
+- Sistemas de NF-e
+- Contabilidade
+- Estoque
+
+PARA IMPLEMENTAR:
+1. API da SEFAZ (NF-e)
+2. Integração Omie/Bling/Tiny
+3. Webhook para ERP externo
+
+--------------------------------------------------------------------------------
+7.6 FREQUÊNCIA DE DEPLOY
+--------------------------------------------------------------------------------
+
+RESPOSTA: DEPLOY MANUAL (conforme necessidade)
+
+ARQUIVO: /app/DEPLOY_VPS_MANUAL.md
+
+PROCESSO ATUAL:
+1. Build local
+2. Push para VPS via rsync/scp
+3. docker-compose up -d
+4. Verificar logs
+
+RECOMENDAÇÃO:
+- CI/CD automatizado
+- Deploy diário/semanal
+- Blue-green deployment
+- Rollback automático
+
+--------------------------------------------------------------------------------
+7.7 EQUIPE OU INDIVIDUAL
+--------------------------------------------------------------------------------
+
+RESPOSTA: ESTRUTURADO PARA EQUIPE
+
+FEATURES DE COLABORAÇÃO:
+1. RBAC (Role-Based Access Control)
+   - Roles: Admin, Manager, Operator
+   - Permissions granulares
+
+2. Audit Logs
+   - Quem fez o quê
+   - Quando
+   - IP de origem
+
+3. User Management
+   - CRUD completo
+   - Convite por email
+   - Desativação
+
+4. Store Access Control
+   - Usuário pode ter acesso a N stores
+   - Permissões por store
+
+--------------------------------------------------------------------------------
+7.8 PRINCIPAL GARGALO ATUAL
+--------------------------------------------------------------------------------
+
+RESPOSTA: BASEADO NO ROADMAP.md
+
+GARGALOS IDENTIFICADOS:
+
+1. TESTES (Crítico)
+   - 33/36 arquivos falhando (91.7%)
+   - Cobertura insuficiente
+   - Markers não registrados
+
+2. DATABASE MIGRATION (Crítico)
+   - TIMESTAMP vs TIMESTAMPTZ
+   - 6 endpoints analytics quebrados
+
+3. MULTI-TENANCY (Segurança)
+   - 18/32 repositories sem filtro
+   - Risco de vazamento de dados
+
+4. TYPE SAFETY
+   - 161 usos de 'any' no frontend
+   - Tipagem incompleta
+
+5. DOCUMENTAÇÃO
+   - README desatualizado
+   - Docstrings incompletas
+
+--------------------------------------------------------------------------------
+7.9 AVISOS DE ATUALIZAÇÕES IA
+--------------------------------------------------------------------------------
+
+RESPOSTA: NÃO IMPLEMENTADO
+
+RECOMENDAÇÃO:
+1. RSS feed de releases (OpenAI, Anthropic)
+2. Dependabot para bibliotecas
+3. Notificação Slack/Discord
+4. Dashboard de versões
+
+--------------------------------------------------------------------------------
+7.10 META: VELOCIDADE OU PERFEIÇÃO
+--------------------------------------------------------------------------------
+
+RESPOSTA: VELOCIDADE (com qualidade aceitável)
+
+EVIDÊNCIA:
+- Score atual: 85/100 (não 100)
+- Débito técnico documentado
+- MVP funcional em produção
+- Roadmap priorizado por impacto
+
+FILOSOFIA:
+- "Done is better than perfect"
+- Iteração rápida
+- Feedback loop curto
+- Melhorias incrementais
+
+================================================================================
+                         MÉTRICAS CONSOLIDADAS
+================================================================================
+
+BACKEND:
+- Arquivos Python: 326
+- Diretórios: 106
+- Linhas de código: 67.782
+- Endpoints API: 156
+- Use Cases: 55
+- Repositories: 36
+- Models: 33
+- Migrações: 15
+
+FRONTEND:
+- Arquivos TS/TSX: 241
+- Diretórios: 73
+- Linhas de código: 39.260
+- Components: 26 categorias
+- Hooks: 32
+- Services: 12
+- Pages: 12
+
+INFRAESTRUTURA:
+- Containers Docker: 6
+- Databases: 2 (PostgreSQL + MongoDB)
+- Cache: 1 (Redis)
+- Jobs Background: 7
+
+QUALIDADE:
+- Score geral: 85/100
+- Testes passando: ~8.3% (3/36 arquivos)
+- TypeScript strict: SIM
+- Clean Architecture: SIM (com 3 violações)
+- Multi-tenancy: 43% cobertura
+
+================================================================================
+                              FIM DO DOCUMENTO
+================================================================================
+
+Gerado automaticamente por análise de código.
+Para dúvidas: revisar arquivos fonte em /app/
+
+PRÓXIMOS PASSOS RECOMENDADOS:
+1. Corrigir testes falhando (FASE 0.6)
+2. Migration database TIMESTAMPTZ (FASE 0.5)
+3. Completar multi-tenancy (FASE 2.1)
+4. Reduzir tipos 'any' (FASE 4.3)
+5. Documentação (FASE 6)
