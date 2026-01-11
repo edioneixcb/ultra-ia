@@ -1,6 +1,30 @@
 {
   "environment": "development",
   "port": 3000,
+  "estiloIASuper": {
+    "enabled": true,
+    "alwaysActive": true,
+    "mode": "ultra-specialized",
+    "principles": {
+      "architecturalCorrectness": true,
+      "zeroHallucinations": true,
+      "zeroFalsePositives": true,
+      "completeSolutions": true,
+      "securityAbsolute": true,
+      "qualityArchitectural": true
+    },
+    "validation": {
+      "multiLayer": true,
+      "proportionalRigor": true,
+      "continuous": true
+    },
+    "communication": {
+      "objective": true,
+      "complete": true,
+      "didactic": true,
+      "transparent": true
+    }
+  },
   "paths": {
     "home": "$HOME",
     "systemRoot": "$HOME/sistema-ultra-ia",
@@ -108,6 +132,320 @@
       "enabled": false,
       "simctlPath": "/usr/bin/xcrun",
       "autoDetect": true
+    }
+  },
+  "fase0": {
+    "baselineManager": {
+      "enabled": true,
+      "autoDetect": true,
+      "checkServices": false,
+      "services": [],
+      "envVarsFilter": [],
+      "secretsPaths": [".env", ".env.local", "secrets/", "config/secrets.json"],
+      "certPaths": ["certs/", "certificates/", "/etc/ssl/certs"]
+    },
+    "antiSkipMechanism": {
+      "enabled": true,
+      "strictMode": true,
+      "logSkipAttempts": true,
+      "blockOnSkip": true
+    },
+    "threeERuleValidator": {
+      "enabled": true,
+      "strictValidation": true,
+      "allowEmptyStrings": false
+    },
+    "absoluteCertaintyAnalyzer": {
+      "enabled": true,
+      "requireMultipleSources": true,
+      "minConfidence": 1.0,
+      "maxFalsePositiveRisk": 0.0,
+      "analyzeTransitiveDependencies": true,
+      "crossReferenceDepth": 3
+    },
+    "completeContractAnalyzer": {
+      "enabled": true,
+      "analyzeInheritance": true,
+      "analyzeAliases": true,
+      "analyzeStaticMethods": true,
+      "analyzeTransitiveDeps": true,
+      "checkNativeDuplications": true
+    },
+    "checkpointManager": {
+      "enabled": true,
+      "strictMode": true,
+      "requireAllCheckpoints": true,
+      "allowSkipOptional": false
+    }
+  },
+  "fase1": {
+    "decisionClassifier": {
+      "enabled": true,
+      "levels": {
+        "level1": { "threshold": 0.8, "action": "block" },
+        "level2": { "threshold": 0.5, "action": "warn" },
+        "level3": { "threshold": 0.0, "action": "allow" }
+      }
+    },
+    "evidenceLevelValidator": {
+      "enabled": true,
+      "requiredLevels": {
+        "critical": "Completa",
+        "high": "Padrão",
+        "medium": "Resumida",
+        "low": "Mínima"
+      }
+    },
+    "chainOfThoughtValidator": {
+      "enabled": true,
+      "requiredComponents": ["observacao", "analise", "decisao", "acao"]
+    },
+    "proactiveAnticipationSystem": {
+      "enabled": true,
+      "maxHistoricalErrors": 100,
+      "patternDetection": {
+        "enabled": true
+      }
+    },
+    "inlineValidatedCodeGenerator": {
+      "enabled": true,
+      "validation": {
+        "maxIterations": 10,
+        "autoCorrect": true,
+        "protectCriticalCode": true
+      }
+    },
+    "errorHandlingValidator": {
+      "enabled": true,
+      "strict": true
+    },
+    "loggingValidator": {
+      "enabled": true,
+      "strict": true
+    },
+    "typeValidator": {
+      "enabled": true,
+      "strict": true,
+      "inferTypes": true
+    },
+    "environmentDetector": {
+      "enabled": true,
+      "autoDetect": true
+    },
+    "evidenceChainManager": {
+      "enabled": true,
+      "preserveRawEvidence": true
+    },
+    "staticAnalyzer": {
+      "enabled": true,
+      "analysisTypes": ["imports", "contracts", "security", "patterns"]
+    },
+    "configValidator": {
+      "enabled": true,
+      "validateOnStartup": true,
+      "strict": true
+    },
+    "traceabilityMatrixManager": {
+      "enabled": true,
+      "validateOnCreate": false,
+      "strict": true
+    }
+  },
+  "fase2": {
+    "intelligentSequentialResolver": {
+      "enabled": true,
+      "maxIterations": 10,
+      "autoRollback": true
+    },
+    "scoreCalculator": {
+      "enabled": true,
+      "strictNA": true
+    },
+    "multiEnvironmentCompatibilityAnalyzer": {
+      "enabled": true,
+      "cacheChangelogs": true
+    },
+    "forensicAnalyzer": {
+      "enabled": true,
+      "cacheEvidence": true
+    },
+    "batchResolver": {
+      "enabled": true,
+      "maxGroupSize": 10
+    },
+    "coverageCalculator": {
+      "enabled": true,
+      "minTotalCoverage": 95,
+      "minTargetCoverage": 90
+    }
+  },
+  "fase3": {
+    "testExpectationValidator": {
+      "enabled": true,
+      "strictIsolation": true
+    },
+    "testValidator": {
+      "enabled": true,
+      "autoUpdate": false,
+      "strictValidation": true
+    },
+    "accurateDocumentationSystem": {
+      "enabled": true,
+      "autoUpdate": false,
+      "requireEvidence": true
+    },
+    "metaValidationSystem": {
+      "enabled": true,
+      "strictMode": true,
+      "requireAllChecklistItems": true
+    }
+  },
+  "fase4": {
+    "knowledgeBaseIndexer": {
+      "enabled": true,
+      "includePatterns": true,
+      "extractExamples": true,
+      "categorize": true,
+      "addMetadata": true
+    },
+    "knowledgeBaseManager": {
+      "enabled": true,
+      "autoCategorize": true,
+      "autoTag": true
+    },
+    "patternDocumentationSystem": {
+      "enabled": true,
+      "autoInferCategory": true
+    },
+    "templateGenerator": {
+      "enabled": true,
+      "validateGenerated": true,
+      "autoCustomize": true
+    }
+  },
+  "fase5": {
+    "architectureTemplateManager": {
+      "enabled": true,
+      "validateGenerated": true
+    },
+    "securityTemplateManager": {
+      "enabled": true,
+      "validateGenerated": true
+    },
+    "integrationTemplateManager": {
+      "enabled": true,
+      "validateGenerated": true
+    },
+    "mobileTemplateManager": {
+      "enabled": true,
+      "validateGenerated": true
+    },
+    "databaseTemplateManager": {
+      "enabled": true,
+      "validateGenerated": true
+    }
+  },
+  "fase6": {
+    "architectureValidator": {
+      "enabled": true,
+      "strictMode": true
+    },
+    "securityValidatorEnhanced": {
+      "enabled": true,
+      "strictMode": true
+    },
+    "integrationValidator": {
+      "enabled": true,
+      "strictMode": true
+    },
+    "mobileValidator": {
+      "enabled": true,
+      "strictMode": true
+    },
+    "databaseValidator": {
+      "enabled": true,
+      "strictMode": true
+    }
+  },
+  "fase7": {
+    "architectureGenerator": {
+      "enabled": true,
+      "validateGenerated": true
+    },
+    "securityGenerator": {
+      "enabled": true,
+      "validateGenerated": true
+    },
+    "integrationGenerator": {
+      "enabled": true,
+      "validateGenerated": true
+    },
+    "mobileGenerator": {
+      "enabled": true,
+      "validateGenerated": true
+    },
+    "databaseGenerator": {
+      "enabled": true,
+      "validateGenerated": true
+    }
+  },
+  "fase8": {
+    "incrementalCodeGenerator": {
+      "enabled": true,
+      "stopOnInvalid": true
+    },
+    "patternLearner": {
+      "enabled": true,
+      "autoExtract": true
+    },
+    "multiLayerValidatorEnhanced": {
+      "enabled": true,
+      "defaultLayers": ["syntax", "structure", "semantics", "security"]
+    },
+    "secureExecutionSystem": {
+      "enabled": true,
+      "strict": true,
+      "timeout": 30000
+    }
+  },
+  "fase9": {
+    "platformDetector": {
+      "enabled": true,
+      "autoDetect": true
+    },
+    "platformSpecificGenerator": {
+      "enabled": true,
+      "responsive": false
+    },
+    "crossPlatformValidator": {
+      "enabled": true,
+      "defaultPlatforms": ["windows", "linux", "macos", "web"]
+    },
+    "platformTestRunner": {
+      "enabled": true
+    },
+    "browserAutomation": {
+      "enabled": true,
+      "headless": true,
+      "timeout": 30000
+    },
+    "emulatorController": {
+      "enabled": true,
+      "autoDetect": true
+    }
+  },
+  "fase10": {
+    "systemIntegrator": {
+      "enabled": true,
+      "strict": true
+    },
+    "endToEndTestRunner": {
+      "enabled": true,
+      "timeout": 60000
+    },
+    "finalValidator": {
+      "enabled": true,
+      "validatePerformance": true
     }
   }
 }

@@ -1,0 +1,408 @@
+{
+  "sistemas": [
+    "config",
+    "logger",
+    "errorHandler",
+    "BaselineManager",
+    "AntiSkipMechanism",
+    "ThreeERuleValidator",
+    "AbsoluteCertaintyAnalyzer",
+    "CompleteContractAnalyzer",
+    "CheckpointManager",
+    "DecisionClassifier",
+    "EvidenceLevelValidator",
+    "ChainOfThoughtValidator",
+    "ProactiveAnticipationSystem",
+    "InlineValidatedCodeGenerator",
+    "ErrorHandlingValidator",
+    "LoggingValidator",
+    "TypeValidator",
+    "EnvironmentDetector",
+    "EvidenceChainManager",
+    "StaticAnalyzer",
+    "ConfigValidator",
+    "TraceabilityMatrixManager",
+    "IntelligentSequentialResolver",
+    "ScoreCalculator",
+    "MultiEnvironmentCompatibilityAnalyzer",
+    "ForensicAnalyzer",
+    "BatchResolver",
+    "CoverageCalculator",
+    "TestExpectationValidator",
+    "TestValidator",
+    "AccurateDocumentationSystem",
+    "MetaValidationSystem",
+    "KnowledgeBaseIndexer",
+    "KnowledgeBaseManager",
+    "PatternDocumentationSystem",
+    "TemplateGenerator",
+    "ArchitectureTemplateManager",
+    "SecurityTemplateManager",
+    "IntegrationTemplateManager",
+    "MobileTemplateManager",
+    "DatabaseTemplateManager",
+    "ArchitectureValidator",
+    "SecurityValidatorEnhanced",
+    "IntegrationValidator",
+    "MobileValidator",
+    "DatabaseValidator",
+    "ArchitectureGenerator",
+    "SecurityGenerator",
+    "IntegrationGenerator",
+    "MobileGenerator",
+    "DatabaseGenerator",
+    "IncrementalCodeGenerator",
+    "PatternLearner",
+    "MultiLayerValidatorEnhanced",
+    "SecureExecutionSystem",
+    "PlatformDetector",
+    "PlatformSpecificGenerator",
+    "CrossPlatformValidator",
+    "PlatformTestRunner",
+    "BrowserAutomation",
+    "EmulatorController",
+    "SystemIntegrator",
+    "EndToEndTestRunner",
+    "FinalValidator"
+  ],
+  "integrationResult": {
+    "id": "integration-1768097245538",
+    "integrated": true,
+    "systems": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63
+    ],
+    "dependencyGraph": {
+      "nodes": [],
+      "edges": []
+    },
+    "initializationOrder": [],
+    "initializationResults": [],
+    "integrationValidation": {
+      "allSystemsRegistered": true,
+      "allSystemsInitialized": true,
+      "issues": [
+        {
+          "system": 0,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 1,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 2,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 3,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 4,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 5,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 6,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 7,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 8,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 9,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 10,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 11,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 12,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 13,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 14,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 15,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 16,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 17,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 18,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 19,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 20,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 21,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 22,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 23,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 24,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 25,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 26,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 27,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 28,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 29,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 30,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 31,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 32,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 33,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 34,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 35,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 36,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 37,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 38,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 39,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 40,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 41,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 42,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 43,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 44,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 45,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 46,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 47,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 48,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 49,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 50,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 51,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 52,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 53,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 54,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 55,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 56,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 57,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 58,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 59,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 60,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 61,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 62,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        },
+        {
+          "system": 63,
+          "issue": "Erro ao validar: Nome do componente deve ser uma string não vazia"
+        }
+      ],
+      "valid": false
+    },
+    "integratedAt": "2026-01-11T02:07:25.539Z"
+  }
+}

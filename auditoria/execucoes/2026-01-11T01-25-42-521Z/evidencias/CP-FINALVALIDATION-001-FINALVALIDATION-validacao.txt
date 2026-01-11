@@ -1,0 +1,684 @@
+{
+  "id": "validation-1768094750891",
+  "validations": {
+    "architecture": {
+      "valid": false,
+      "issues": [
+        {
+          "type": "validation_error",
+          "system": 0,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 1,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 2,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 3,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 4,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 5,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 6,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 7,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 8,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 9,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 10,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 11,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 12,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 13,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 14,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 15,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 16,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 17,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 18,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 19,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 20,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 21,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 22,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 23,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 24,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 25,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 26,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 27,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 28,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 29,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 30,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 31,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 32,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 33,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 34,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 35,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 36,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 37,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 38,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 39,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 40,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 41,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 42,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 43,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 44,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 45,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 46,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 47,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 48,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "validation_error",
+          "system": 49,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        }
+      ],
+      "score": 0
+    },
+    "integration": {
+      "valid": false,
+      "issues": [
+        {
+          "type": "integration_error",
+          "system": 0,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 1,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 2,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 3,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 4,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 5,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 6,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 7,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 8,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 9,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 10,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 11,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 12,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 13,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 14,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 15,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 16,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 17,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 18,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 19,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 20,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 21,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 22,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 23,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 24,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 25,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 26,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 27,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 28,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 29,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 30,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 31,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 32,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 33,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 34,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 35,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 36,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 37,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 38,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 39,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 40,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 41,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 42,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 43,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 44,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 45,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 46,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 47,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 48,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        },
+        {
+          "type": "integration_error",
+          "system": 49,
+          "error": "Nome do componente deve ser uma string não vazia",
+          "severity": "medium"
+        }
+      ],
+      "score": 0
+    },
+    "performance": {
+      "valid": true,
+      "issues": [],
+      "metrics": [],
+      "totalInitTime": 0,
+      "score": 100
+    },
+    "security": {
+      "valid": true,
+      "issues": [],
+      "score": 100
+    },
+    "documentation": {
+      "valid": true,
+      "issues": [],
+      "score": 100
+    },
+    "tests": {
+      "valid": true,
+      "issues": [],
+      "score": 100
+    }
+  },
+  "overallScore": 50,
+  "report": {
+    "overallScore": 50,
+    "status": "needs_improvement",
+    "sections": [
+      {
+        "section": "architecture",
+        "score": 0,
+        "valid": false,
+        "issuesCount": 50
+      },
+      {
+        "section": "integration",
+        "score": 0,
+        "valid": false,
+        "issuesCount": 50
+      },
+      {
+        "section": "performance",
+        "score": 100,
+        "valid": true,
+        "issuesCount": 0
+      },
+      {
+        "section": "security",
+        "score": 100,
+        "valid": true,
+        "issuesCount": 0
+      },
+      {
+        "section": "documentation",
+        "score": 100,
+        "valid": true,
+        "issuesCount": 0
+      },
+      {
+        "section": "tests",
+        "score": 100,
+        "valid": true,
+        "issuesCount": 0
+      }
+    ],
+    "generatedAt": "2026-01-11T01:25:50.892Z"
+  },
+  "validatedAt": "2026-01-11T01:25:50.892Z"
+}

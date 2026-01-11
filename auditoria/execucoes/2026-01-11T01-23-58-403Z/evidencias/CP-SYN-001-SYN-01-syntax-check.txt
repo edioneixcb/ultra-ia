@@ -1,0 +1,229 @@
+{
+  "imports": {
+    "imports": [
+      {
+        "path": "./utils/ConfigLoader.js",
+        "line": 7,
+        "code": "import { loadConfig } from './utils/ConfigLoader.js'"
+      },
+      {
+        "path": "./utils/Logger.js",
+        "line": 8,
+        "code": "import { getLogger } from './utils/Logger.js'"
+      },
+      {
+        "path": "./utils/ErrorHandler.js",
+        "line": 9,
+        "code": "import { getErrorHandler } from './utils/ErrorHandler.js'"
+      },
+      {
+        "path": "./utils/AsyncErrorHandler.js",
+        "line": 10,
+        "code": "import { getAsyncErrorHandler } from './utils/AsyncErrorHandler.js'"
+      },
+      {
+        "path": "./systems/UltraSystem.js",
+        "line": 11,
+        "code": "import { getUltraSystem } from './systems/UltraSystem.js'"
+      },
+      {
+        "path": "./src/index.js",
+        "line": 60,
+        "code": "import ultraSystem from \"./src/index.js\""
+      }
+    ],
+    "issues": [],
+    "hasIssues": false
+  },
+  "contracts": {
+    "methodCalls": [
+      {
+        "object": "configLoader",
+        "method": "get",
+        "line": 15,
+        "code": "configLoader.get("
+      },
+      {
+        "object": "asyncErrorHandler",
+        "method": "register",
+        "line": 21,
+        "code": "asyncErrorHandler.register("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 40,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 41,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 42,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 43,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 44,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 45,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 46,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 47,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 48,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 49,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 50,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 51,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 52,
+        "code": "console.log("
+      },
+      {
+        "object": "ultraSystem",
+        "method": "getStats",
+        "line": 54,
+        "code": "ultraSystem.getStats("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 55,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 56,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 57,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 58,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 59,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 60,
+        "code": "console.log("
+      },
+      {
+        "object": "console",
+        "method": "log",
+        "line": 61,
+        "code": "console.log("
+      },
+      {
+        "object": "ultraSystem",
+        "method": "process",
+        "line": 61,
+        "code": "ultraSystem.process("
+      }
+    ],
+    "issues": [
+      {
+        "type": "method_not_found",
+        "severity": "medium",
+        "line": 15,
+        "object": "configLoader",
+        "method": "get",
+        "suggestion": "Verificar se método get existe em configLoader"
+      },
+      {
+        "type": "method_not_found",
+        "severity": "medium",
+        "line": 21,
+        "object": "asyncErrorHandler",
+        "method": "register",
+        "suggestion": "Verificar se método register existe em asyncErrorHandler"
+      },
+      {
+        "type": "method_not_found",
+        "severity": "medium",
+        "line": 54,
+        "object": "ultraSystem",
+        "method": "getStats",
+        "suggestion": "Verificar se método getStats existe em ultraSystem"
+      },
+      {
+        "type": "method_not_found",
+        "severity": "medium",
+        "line": 61,
+        "object": "ultraSystem",
+        "method": "process",
+        "suggestion": "Verificar se método process existe em ultraSystem"
+      }
+    ],
+    "hasIssues": true
+  },
+  "security": {
+    "issues": [],
+    "hasIssues": false
+  },
+  "patterns": {
+    "issues": [],
+    "hasIssues": false
+  }
+}

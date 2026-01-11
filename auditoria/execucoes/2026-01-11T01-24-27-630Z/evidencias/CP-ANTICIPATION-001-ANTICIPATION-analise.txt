@@ -1,0 +1,288 @@
+{
+  "immediateRisks": [
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 40,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 41,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 42,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 43,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 44,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 45,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 46,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 47,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 48,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 49,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 50,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 51,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 52,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 55,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 56,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 57,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 58,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 59,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 60,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    },
+    {
+      "type": "console_usage",
+      "severity": "medium",
+      "line": 61,
+      "pattern": "console.log(",
+      "suggestion": "Substituir console.log por logger estruturado"
+    }
+  ],
+  "futureRisks": [],
+  "prevention": [
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 40
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 41
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 42
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 43
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 44
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 45
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 46
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 47
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 48
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 49
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 50
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 51
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 52
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 55
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 56
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 57
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 58
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 59
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 60
+    },
+    {
+      "type": "pattern_based",
+      "priority": "medium",
+      "issue": "console_usage",
+      "suggestion": "Substituir console.log por logger estruturado",
+      "line": 61
+    }
+  ],
+  "analyzedAt": "2026-01-11T01:24:27.812Z"
+}

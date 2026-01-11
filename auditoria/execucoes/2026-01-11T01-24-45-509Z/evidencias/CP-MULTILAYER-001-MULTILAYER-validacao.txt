@@ -1,0 +1,28 @@
+{
+  "id": "validation-1768094694035",
+  "valid": true,
+  "layers": [
+    {
+      "layer": "syntax",
+      "valid": true,
+      "issues": []
+    },
+    {
+      "layer": "structure",
+      "valid": true,
+      "issues": []
+    },
+    {
+      "layer": "semantics",
+      "valid": true,
+      "issues": []
+    },
+    {
+      "layer": "security",
+      "valid": true,
+      "issues": []
+    }
+  ],
+  "issues": [],
+  "validatedAt": "2026-01-11T01:24:54.036Z"
+}

@@ -1,0 +1,55 @@
+{
+  "targets": [
+    {
+      "target": "web",
+      "coverage": 0,
+      "totalFailures": 0,
+      "percentage": 0,
+      "coveredFailures": [],
+      "applicableChecks": 18
+    },
+    {
+      "target": "linux",
+      "coverage": 0,
+      "totalFailures": 0,
+      "percentage": 0,
+      "coveredFailures": [],
+      "applicableChecks": 18
+    }
+  ],
+  "total": {
+    "totalCovered": 0,
+    "totalFailures": 0,
+    "percentage": 0,
+    "meetsMinimum": false
+  },
+  "validation": {
+    "valid": false,
+    "errors": [
+      {
+        "type": "total_coverage_below_minimum",
+        "message": "Cobertura total 0.00% está abaixo do mínimo de 95%",
+        "actual": 0,
+        "required": 95
+      },
+      {
+        "type": "target_coverage_below_minimum",
+        "message": "Alvos com cobertura abaixo de 90%: web, linux",
+        "targets": [
+          {
+            "target": "web",
+            "percentage": 0
+          },
+          {
+            "target": "linux",
+            "percentage": 0
+          }
+        ]
+      }
+    ],
+    "warnings": [],
+    "totalCoverage": 0,
+    "meetsMinimum": false,
+    "allTargetsMeetMinimum": false
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "score": 61.11,
+  "passing": 11,
+  "applicable": 18,
+  "naValid": 0,
+  "naInvalid": 0,
+  "total": 18,
+  "breakdown": {
+    "passing": 11,
+    "failing": 7,
+    "na": 0,
+    "naValid": 0,
+    "naInvalid": 0
+  }
+}

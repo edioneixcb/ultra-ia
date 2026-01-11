@@ -1,0 +1,60 @@
+{
+  "timestamp": "2026-01-11T01:25:02.831Z",
+  "system": "Ultra-IA",
+  "environment": {
+    "os": {
+      "platform": "linux",
+      "arch": "x64",
+      "version": "#202511241048~1764607909~24.04~df6b2b6 SMP PREEMPT_DYNAMIC Mon D",
+      "cpus": 16
+    },
+    "runtime": {
+      "type": "nodejs",
+      "version": "v18.20.8",
+      "v8": "10.2.154.26-node.39",
+      "uv": "1.44.2",
+      "zlib": "1.3.0.1-motley",
+      "openssl": "3.0.16",
+      "python": "Python 3.12.3"
+    },
+    "buildTools": {
+      "npm": "10.8.2",
+      "docker": "Docker version 29.1.3, build f52814d",
+      "git": "git version 2.43.0"
+    },
+    "ide": {
+      "detected": null,
+      "environment": {}
+    }
+  },
+  "dependencies": {
+    "external": [],
+    "status": {},
+    "quotas": {},
+    "packageJson": {
+      "name": "sistema-ultra-ia",
+      "version": "1.0.0",
+      "dependencies": 11,
+      "devDependencies": 1
+    }
+  },
+  "configuration": {
+    "envVars": {
+      "PATH": "/home/edioneixcb/.local/bin:/home/edioneixcb/.nvm/versions/node/v18.20.8/bin:/home/edioneixcb/.local/bin:/home/edioneixcb/.local/bin:/home/edioneixcb/.nvm/versions/node/v18.20.8/bin:/home/edioneixcb/.nvm/versions/node/v18.20.8/bin:/home/edioneixcb/.asdf/shims:/home/edioneixcb/.asdf/bin:/home/edioneixcb/.local/bin:/tmp/.mount_cursorAJ1YNW/usr/bin/:/tmp/.mount_cursorAJ1YNW/usr/sbin/:/tmp/.mount_cursorAJ1YNW/usr/games/:/tmp/.mount_cursorAJ1YNW/bin/:/tmp/.mount_cursorAJ1YNW/sbin/:/tmp/.mount_cursorUnegnQ/usr/bin/:/tmp/.mount_cursorUnegnQ/usr/sbin/:/tmp/.mount_cursorUnegnQ/usr/games/:/tmp/.mount_cursorUnegnQ/bin/:/tmp/.mount_cursorUnegnQ/sbin/:/home/edioneixcb/.local/bin:/home/edioneixcb/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/edioneixcb/.fzf/bin:/home/edioneixcb/.cursor/extensions/ms-python.debugpy-2025.18.0/bundled/scripts/noConfigScripts:/home/edioneixcb/.console-ninja/.bin",
+      "HOME": "/home/edioneixcb",
+      "USER": "edioneixcb",
+      "SHELL": "/bin/bash"
+    },
+    "secrets": [],
+    "certificates": [
+      {
+        "path": "/etc/ssl/certs",
+        "exists": true
+      }
+    ]
+  },
+  "metadata": {
+    "createdBy": "BaselineManager",
+    "version": "1.0.0"
+  }
+}

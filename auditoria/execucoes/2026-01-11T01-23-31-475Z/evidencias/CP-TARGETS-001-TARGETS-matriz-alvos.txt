@@ -1,0 +1,32 @@
+{
+  "windows": {
+    "disponivel": false,
+    "bloqueado": false,
+    "criterios": []
+  },
+  "linux": {
+    "disponivel": true,
+    "bloqueado": false,
+    "criterios": []
+  },
+  "macos": {
+    "disponivel": false,
+    "bloqueado": false,
+    "criterios": []
+  },
+  "web": {
+    "disponivel": true,
+    "bloqueado": false,
+    "criterios": []
+  },
+  "android": {
+    "disponivel": false,
+    "bloqueado": false,
+    "criterios": []
+  },
+  "ios": {
+    "disponivel": false,
+    "bloqueado": false,
+    "criterios": []
+  }
+}

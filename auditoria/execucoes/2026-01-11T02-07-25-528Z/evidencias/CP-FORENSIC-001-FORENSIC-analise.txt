@@ -1,0 +1,40 @@
+{
+  "classification": {
+    "category": "unknown",
+    "severity": "medium",
+    "type": "unknown"
+  },
+  "pattern": {
+    "id": "null-reference",
+    "name": "Null Reference Error",
+    "messagePattern": "cannot read.*of null|cannot read.*of undefined",
+    "solution": "Adicionar verificação de null/undefined antes de usar variável",
+    "confidence": 0.5
+  },
+  "evidence": {
+    "timestamp": "2026-01-11T02:07:34.491Z",
+    "context": {},
+    "environment": {},
+    "code": null,
+    "relatedErrors": []
+  },
+  "rootCause": {
+    "identified": true,
+    "cause": "Null Reference Error",
+    "explanation": "Adicionar verificação de null/undefined antes de usar variável",
+    "confidence": 0.5,
+    "source": "known_pattern"
+  },
+  "recommendations": [
+    {
+      "type": "immediate",
+      "priority": "high",
+      "action": "Adicionar verificação de null/undefined antes de usar variável"
+    },
+    {
+      "type": "investigation",
+      "priority": "medium",
+      "action": "Adicionar verificação de null/undefined antes de usar variável"
+    }
+  ]
+}
