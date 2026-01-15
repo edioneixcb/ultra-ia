@@ -60,7 +60,7 @@ class MultiLayerValidator {
    * @param {object} options - Opções de validação
    * @returns {Promise<object>} Resultado completo da validação
    */
-  async validate(code, options = {}) {
+  validate(code, options = {}) {
     const {
       language = 'javascript',
       layers = ['syntax', 'structure', 'security', 'bestPractices'],
@@ -94,7 +94,7 @@ class MultiLayerValidator {
           break;
         }
 
-        const layerResult = await this.validateLayer(code, layer, { language, context });
+        const layerResult = this.validateLayer(code, layer, { language, context });
         results.layers[layer] = layerResult;
 
         if (layerResult.valid) {
@@ -142,7 +142,7 @@ class MultiLayerValidator {
    * @param {object} options - Opções
    * @returns {Promise<object>} Resultado da camada
    */
-  async validateLayer(code, layer, options = {}) {
+  validateLayer(code, layer, options = {}) {
     const { language = 'javascript', context = null } = options;
 
     const result = {

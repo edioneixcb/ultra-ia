@@ -142,6 +142,30 @@ describe('ComponentRegistry', () => {
       expect(instance.dependsOn.level).toBe(2);
       expect(instance.dependsOn.dependsOn.level).toBe(1);
     });
+
+    it('deve tratar dependências opcionais não registradas como null', () => {
+      const factory = (dep) => ({ name: 'Component', optionalDep: dep });
+      
+      // Registrar com dependência opcional que não existe
+      registry.register('component', factory, ['?OptionalDep']);
+      
+      const instance = registry.get('component');
+      
+      expect(instance.optionalDep).toBeNull();
+    });
+
+    it('deve injetar dependências opcionais quando registradas', () => {
+      const depFactory = () => ({ name: 'Optional' });
+      const factory = (dep) => ({ name: 'Component', optionalDep: dep });
+      
+      registry.register('OptionalDep', depFactory);
+      registry.register('component', factory, ['?OptionalDep']);
+      
+      const instance = registry.get('component');
+      
+      expect(instance.optionalDep).not.toBeNull();
+      expect(instance.optionalDep.name).toBe('Optional');
+    });
   });
 
   describe('resolveDependencies', () => {

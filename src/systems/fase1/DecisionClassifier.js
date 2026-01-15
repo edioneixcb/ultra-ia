@@ -18,7 +18,12 @@ import BaseSystem from '../../core/BaseSystem.js';
 class DecisionClassifier extends BaseSystem {
   async onInitialize() {
     this.classifications = new Map();
-    this.logger?.info('DecisionClassifier inicializado');
+    this.strictValidation = this.config?.features?.strictValidation === true;
+    this.structuredLogging = this.config?.features?.structuredLogging === true;
+    this.logger?.info('DecisionClassifier inicializado', { 
+      strictValidation: this.strictValidation,
+      structuredLogging: this.structuredLogging 
+    });
   }
 
   /**
@@ -34,6 +39,10 @@ class DecisionClassifier extends BaseSystem {
       throw new Error('decision é obrigatório no contexto');
     }
 
+    if (this.strictValidation && (!decision.action && !decision.description)) {
+      throw new Error('decision inválida: action ou description são obrigatórios em modo strict');
+    }
+
     this.logger?.info('Classificando decisão', { decisionId: decision.id || 'desconhecido' });
 
     const classification = this.classify(decision);
@@ -47,11 +56,16 @@ class DecisionClassifier extends BaseSystem {
       });
     }
 
+    if (this.structuredLogging) {
     this.logger?.info('Decisão classificada', {
       decisionId: decision.id || 'desconhecido',
       level: classification.level,
-      action: classification.action
+        action: classification.action,
+        requiresApproval: classification.requiresApproval
     });
+    } else {
+      this.logger?.info(`Decisão classificada: Nível ${classification.level} - ${classification.action}`);
+    }
 
     return classification;
   }

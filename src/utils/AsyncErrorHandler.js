@@ -117,7 +117,7 @@ class AsyncErrorHandler {
    * Faz graceful shutdown do processo
    * @param {Error} error - Erro que causou o shutdown
    */
-  gracefulShutdown(error) {
+  async gracefulShutdown(error) {
     this.logger?.info('Iniciando graceful shutdown', {
       error: error?.message
     });
@@ -128,18 +128,18 @@ class AsyncErrorHandler {
       process.exit(1);
     }, 10000); // 10 segundos
 
-      // Tentar cleanup de recursos
+    // Tentar cleanup de recursos
+    try {
+      // Fechar conexões de banco de dados se DatabaseManager disponível
       try {
-        // Fechar conexões de banco de dados se DatabaseManager disponível
-        try {
-          const dbModule = await import('./DatabaseManager.js');
-          const dbManager = dbModule.getDatabaseManager();
-          if (dbManager) {
-            dbManager.closeAll();
-          }
-        } catch (dbError) {
-          // Ignorar se DatabaseManager não disponível
+        const dbModule = await import('./DatabaseManager.js');
+        const dbManager = dbModule.getDatabaseManager();
+        if (dbManager) {
+          dbManager.closeAll();
         }
+      } catch (dbError) {
+        // Ignorar se DatabaseManager não disponível
+      }
 
       // Limpar timeout e sair
       clearTimeout(shutdownTimeout);
@@ -206,11 +206,13 @@ class AsyncErrorHandler {
   }
 }
 
-// Singleton instance
+// Singleton instance with initialization lock
 let instance = null;
+let initializationPromise = null;
 
 /**
  * Obtém instância singleton do AsyncErrorHandler
+ * Thread-safe: previne criação dupla durante inicialização concorrente
  */
 export function getAsyncErrorHandler(config = null, logger = null, errorHandler = null) {
   if (!instance) {

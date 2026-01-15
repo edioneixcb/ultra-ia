@@ -7,6 +7,7 @@
  * - Validação Inline Durante Geração
  * - Auto-Correção Durante Geração
  * - Proteção Contra Formatação Problemática
+ * - Integração com RAG (Generator)
  * 
  * Métricas de Sucesso:
  * - 100% do código gerado é type-safe e seguro
@@ -17,10 +18,26 @@
 import BaseSystem from '../../core/BaseSystem.js';
 
 class InlineValidatedCodeGenerator extends BaseSystem {
+  /**
+   * Construtor com injeção de dependências
+   * 
+   * @param {Object} config - Configuração
+   * @param {Object} logger - Logger
+   * @param {Object} errorHandler - Error Handler
+   * @param {Object} [generator=null] - Gerador opcional (RAG)
+   */
+  constructor(config = null, logger = null, errorHandler = null, generator = null) {
+    super(config, logger, errorHandler);
+    this.generator = generator;
+    this.useRAGGeneration = config?.features?.useRAGGeneration !== false && generator !== null;
+  }
+
   async onInitialize() {
     this.generatedCode = new Map();
     this.maxIterations = this.config?.validation?.maxIterations || 10;
-    this.logger?.info('InlineValidatedCodeGenerator inicializado');
+    this.logger?.info('InlineValidatedCodeGenerator inicializado', {
+      useRAGGeneration: this.useRAGGeneration
+    });
   }
 
   /**
@@ -138,7 +155,23 @@ class InlineValidatedCodeGenerator extends BaseSystem {
    * @returns {Promise<string>} Código gerado
    */
   async generateCode(template, context) {
-    // Se template é string, retornar como está (simplificado)
+    // Se RAG Generation habilitado, usar generator
+    if (this.useRAGGeneration && this.generator) {
+      try {
+        const generated = await this.generator.execute({
+          template,
+          context,
+          mode: 'inline'
+        });
+        if (generated && generated.code) {
+          return generated.code;
+        }
+      } catch (error) {
+        this.logger?.warn('Falha na geração RAG, usando fallback', { error });
+      }
+    }
+
+    // Fallback: Se template é string, retornar como está
     if (typeof template === 'string') {
       return template;
     }
@@ -407,8 +440,9 @@ export default InlineValidatedCodeGenerator;
  * @param {Object} config - Configuração
  * @param {Object} logger - Logger
  * @param {Object} errorHandler - Error Handler
+ * @param {Object} [generator=null] - Generator opcional
  * @returns {InlineValidatedCodeGenerator} Instância do InlineValidatedCodeGenerator
  */
-export function createInlineValidatedCodeGenerator(config = null, logger = null, errorHandler = null) {
-  return new InlineValidatedCodeGenerator(config, logger, errorHandler);
+export function createInlineValidatedCodeGenerator(config = null, logger = null, errorHandler = null, generator = null) {
+  return new InlineValidatedCodeGenerator(config, logger, errorHandler, generator);
 }

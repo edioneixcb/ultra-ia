@@ -26,7 +26,9 @@ class ConfigValidator extends BaseSystem {
   async onInitialize() {
     this.validations = new Map();
     this.projectRoot = null;
-    this.logger?.info('ConfigValidator inicializado');
+    this.validationCache = new Map();
+    this.useCache = this.config?.features?.useConfigCache !== false;
+    this.logger?.info('ConfigValidator inicializado', { useCache: this.useCache });
   }
 
   /**
@@ -36,10 +38,20 @@ class ConfigValidator extends BaseSystem {
    * @returns {Promise<Object>} Resultado da validação
    */
   async onExecute(context) {
-    const { config, configId, validationType = 'full' } = context;
+    const { config, configId, validationType = 'full', forceRefresh = false } = context;
 
     if (!config) {
       throw new Error('config é obrigatório no contexto');
+    }
+
+    // Verificar cache se habilitado
+    if (this.useCache && !forceRefresh && configId && this.validationCache.has(configId)) {
+      const cached = this.validationCache.get(configId);
+      // Validar se tipo corresponde
+      if (cached.validationType === validationType || cached.validationType === 'full') {
+         this.logger?.debug('Retornando validação do cache', { configId });
+         return cached;
+      }
     }
 
     this.logger?.info('Validando configuração', {
@@ -70,14 +82,20 @@ class ConfigValidator extends BaseSystem {
       };
     }
 
-    // Armazenar validação
-    const id = configId || `validation-${Date.now()}`;
-    this.validations.set(id, {
+    const result = {
       ...validation,
       config,
       validationType,
       validatedAt: new Date().toISOString()
-    });
+    };
+
+    // Armazenar validação
+    const id = configId || `validation-${Date.now()}`;
+    this.validations.set(id, result);
+
+    if (this.useCache && configId) {
+      this.validationCache.set(configId, result);
+    }
 
     return validation;
   }
@@ -305,29 +323,41 @@ class ConfigValidator extends BaseSystem {
   }
 
   /**
-   * Detecta raiz do projeto
+   * Detecta raiz do projeto de forma robusta
    * 
    * @returns {string} Caminho da raiz do projeto
    */
   detectProjectRoot() {
-    let current = process.cwd();
+    let current;
 
-    // Se estamos em um módulo ES, tentar detectar raiz baseada em __dirname
+    // Tentar usar import.meta.url primeiro (ESM)
     try {
+      if (import.meta && import.meta.url) {
       const __filename = fileURLToPath(import.meta.url);
       current = dirname(__filename);
+      }
     } catch (e) {
-      // Fallback para process.cwd()
+      // Ignorar erro
     }
 
-    while (current !== '/' && current !== dirname(current)) {
+    // Fallback para process.cwd() se não detectou
+    if (!current) {
+      current = process.cwd();
+    }
+    
+    // Subir diretórios até encontrar package.json
+    const maxDepth = 10;
+    let depth = 0;
+
+    while (current && current !== dirname(current) && depth < maxDepth) {
       if (existsSync(join(current, 'package.json'))) {
         return current;
       }
       current = dirname(current);
+      depth++;
     }
 
-    return process.cwd();
+    return process.cwd(); // Último recurso
   }
 
   /**

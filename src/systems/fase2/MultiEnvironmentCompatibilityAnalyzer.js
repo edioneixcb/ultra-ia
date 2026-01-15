@@ -15,12 +15,41 @@
  */
 
 import BaseSystem from '../../core/BaseSystem.js';
+import axios from 'axios';
+import { getCacheManager } from '../../utils/CacheManager.js';
 
 class MultiEnvironmentCompatibilityAnalyzer extends BaseSystem {
+  constructor(config = null, logger = null, errorHandler = null, environmentDetector = null) {
+    super(config, logger, errorHandler);
+    this.environmentDetector = environmentDetector;
+    this.useEnvironmentDetection = config?.features?.useEnvironmentDetection !== false && environmentDetector !== null;
+    this.useHTTPCache = config?.features?.useHTTPCache !== false;
+    this.cacheTimeout = config?.fase2?.multiEnvironmentCompatibilityAnalyzer?.cacheTimeout || 3600000; // 1 hora padrão
+    this.cacheManager = null;
+    this.useLRUCache = config?.features?.useCache !== false;
+  }
+
   async onInitialize() {
     this.analyses = new Map();
     this.changelogCache = new Map();
-    this.logger?.info('MultiEnvironmentCompatibilityAnalyzer inicializado');
+    this.httpCache = new Map(); // Cache HTTP para changelogs
+    
+    // Inicializar cache LRU se habilitado
+    if (this.useLRUCache) {
+      try {
+        this.cacheManager = getCacheManager(this.config, this.logger);
+        this.logger?.debug('CacheManager integrado no MultiEnvironmentCompatibilityAnalyzer');
+      } catch (e) {
+        this.logger?.warn('Erro ao obter CacheManager, continuando sem cache LRU', { error: e.message });
+        this.useLRUCache = false;
+      }
+    }
+    
+    this.logger?.info('MultiEnvironmentCompatibilityAnalyzer inicializado', {
+      useEnvironmentDetection: this.useEnvironmentDetection,
+      useHTTPCache: this.useHTTPCache,
+      useLRUCache: this.useLRUCache
+    });
   }
 
   /**
@@ -71,36 +100,77 @@ class MultiEnvironmentCompatibilityAnalyzer extends BaseSystem {
   }
 
   /**
-   * Analisa compatibilidade de runtime
+   * Analisa compatibilidade de runtime (com cache)
    * 
    * @param {string} code - Código
    * @param {string} targetRuntime - Runtime alvo (nodejs, deno, browser)
    * @returns {Promise<Object>} Análise de compatibilidade
    */
   async analyzeRuntimeCompatibility(code, targetRuntime) {
+    // Verificar cache LRU se habilitado
+    if (this.useLRUCache && this.cacheManager) {
+      const cacheKey = `runtime:${targetRuntime}:${code.substring(0, 100).replace(/\s+/g, '')}`;
+      const cached = this.cacheManager.get(cacheKey);
+      if (cached) {
+        this.logger?.debug('Análise de runtime retornada do cache');
+        return cached;
+      }
+    }
+
+    // Se EnvironmentDetector disponível, usar detecção real do ambiente
+    let detectedEnvironment = null;
+    if (this.useEnvironmentDetection && this.environmentDetector) {
+      try {
+        detectedEnvironment = await this.environmentDetector.execute({});
+        this.logger?.debug('Ambiente detectado para análise de compatibilidade', {
+          nodejs: detectedEnvironment.nodejs?.found,
+          docker: detectedEnvironment.docker?.found
+        });
+      } catch (e) {
+        this.logger?.warn('Erro ao detectar ambiente, usando análise padrão', { error: e.message });
+      }
+    }
+
     const analysis = {
-      nodejs: await this.analyzeForNodeJS(code),
-      deno: await this.analyzeForDeno(code),
-      browser: await this.analyzeForBrowser(code)
+      nodejs: await this.analyzeForNodeJS(code, detectedEnvironment),
+      deno: await this.analyzeForDeno(code, detectedEnvironment),
+      browser: await this.analyzeForBrowser(code, detectedEnvironment)
     };
 
     const targetAnalysis = analysis[targetRuntime] || analysis.nodejs;
 
-    return {
+    // Adicionar informações do ambiente detectado se disponível
+    const result = {
       targetRuntime,
       compatible: targetAnalysis.isCompatible,
       issues: targetAnalysis.issues,
       alternatives: await this.suggestAlternatives(code, targetRuntime, targetAnalysis.issues)
     };
+
+    if (detectedEnvironment) {
+      result.detectedEnvironment = {
+        nodejs: detectedEnvironment.nodejs,
+        docker: detectedEnvironment.docker
+      };
+    }
+
+    // Armazenar no cache LRU se habilitado
+    if (this.useLRUCache && this.cacheManager) {
+      const cacheKey = `runtime:${targetRuntime}:${code.substring(0, 100).replace(/\s+/g, '')}`;
+      this.cacheManager.set(cacheKey, result, 3600000); // Cache por 1 hora
+    }
+
+    return result;
   }
 
   /**
    * Analisa código para Node.js
    * 
    * @param {string} code - Código
+   * @param {Object} detectedEnvironment - Ambiente detectado (opcional)
    * @returns {Promise<Object>} Análise
    */
-  async analyzeForNodeJS(code) {
+  async analyzeForNodeJS(code, detectedEnvironment = null) {
     const issues = [];
 
     // Verificar uso de APIs específicas do Deno
@@ -126,9 +196,35 @@ class MultiEnvironmentCompatibilityAnalyzer extends BaseSystem {
       });
     }
 
+    // Se ambiente detectado, verificar versão do Node.js
+    if (detectedEnvironment?.nodejs?.found && detectedEnvironment.nodejs.version) {
+      const nodeVersion = detectedEnvironment.nodejs.version;
+      const majorVersion = parseInt(nodeVersion.replace('v', '').split('.')[0]);
+
+      // Verificar features que requerem versões específicas
+      if (code.includes('??') && majorVersion < 14) {
+        issues.push({
+          type: 'node_version_incompatible',
+          severity: 'high',
+          description: `Nullish coalescing (??) requer Node.js 14+, detectado: ${nodeVersion}`,
+          suggestion: 'Atualizar Node.js ou usar alternativa compatível'
+        });
+      }
+
+      if (code.includes('?.') && majorVersion < 14) {
+        issues.push({
+          type: 'node_version_incompatible',
+          severity: 'high',
+          description: `Optional chaining (?.) requer Node.js 14+, detectado: ${nodeVersion}`,
+          suggestion: 'Atualizar Node.js ou usar alternativa compatível'
+        });
+      }
+    }
+
     return {
       isCompatible: issues.length === 0,
-      issues
+      issues,
+      nodeVersion: detectedEnvironment?.nodejs?.version || null
     };
   }
 
@@ -234,42 +330,175 @@ class MultiEnvironmentCompatibilityAnalyzer extends BaseSystem {
    * 
    * @param {string} code - Código
    * @param {string} sdkVersion - Versão do SDK
+   * @param {string} sdkName - Nome do SDK (opcional, padrão 'node')
    * @returns {Promise<Object>} Análise
    */
-  async analyzeSDKCompatibility(code, sdkVersion) {
-    const changelog = await this.fetchChangelog(sdkVersion);
+  async analyzeSDKCompatibility(code, sdkVersion, sdkName = 'node') {
+    const changelog = await this.fetchChangelog(sdkVersion, sdkName);
     const deprecatedAPIs = await this.findDeprecatedAPIs(code, changelog);
     const breakingChanges = await this.findBreakingChanges(code, changelog);
 
     return {
       sdkVersion,
+      sdkName,
       compatible: deprecatedAPIs.length === 0 && breakingChanges.length === 0,
       deprecated: deprecatedAPIs,
       breaking: breakingChanges,
-      alternatives: await this.suggestSDKAlternatives(deprecatedAPIs, breakingChanges)
+      alternatives: await this.suggestSDKAlternatives(deprecatedAPIs, breakingChanges),
+      changelogSource: changelog.source || 'unknown'
     };
   }
 
   /**
-   * Busca changelog (simplificado - em produção buscaria de fonte real)
+   * Busca changelog com cache HTTP quando disponível
    * 
    * @param {string} sdkVersion - Versão do SDK
+   * @param {string} sdkName - Nome do SDK (ex: 'node', 'express', 'react')
    * @returns {Promise<Object>} Changelog
    */
-  async fetchChangelog(sdkVersion) {
-    // Verificar cache
-    if (this.changelogCache.has(sdkVersion)) {
-      return this.changelogCache.get(sdkVersion);
+  async fetchChangelog(sdkVersion, sdkName = 'node') {
+    const cacheKey = `${sdkName}@${sdkVersion}`;
+
+    // Verificar cache local primeiro
+    if (this.changelogCache.has(cacheKey)) {
+      const cached = this.changelogCache.get(cacheKey);
+      if (Date.now() - cached.timestamp < this.cacheTimeout) {
+        this.logger?.debug('Changelog retornado do cache local', { cacheKey });
+        return cached.data;
+      }
     }
 
-    // Simulado - em produção buscaria de fonte real
+    // Verificar cache HTTP se habilitado
+    if (this.useHTTPCache && this.httpCache.has(cacheKey)) {
+      const httpCached = this.httpCache.get(cacheKey);
+      if (Date.now() - httpCached.timestamp < this.cacheTimeout) {
+        this.logger?.debug('Changelog retornado do cache HTTP', { cacheKey });
+        return httpCached.data;
+      }
+    }
+
+    // Tentar buscar de fonte HTTP se habilitado
+    if (this.useHTTPCache) {
+      try {
+        const changelog = await this.fetchChangelogFromHTTP(sdkName, sdkVersion);
+        if (changelog) {
+          // Armazenar em ambos os caches
+          this.changelogCache.set(cacheKey, {
+            data: changelog,
+            timestamp: Date.now()
+          });
+          this.httpCache.set(cacheKey, {
+            data: changelog,
+            timestamp: Date.now()
+          });
+          return changelog;
+        }
+      } catch (e) {
+        this.logger?.warn('Erro ao buscar changelog via HTTP, usando fallback', {
+          error: e.message,
+          sdkName,
+          sdkVersion
+        });
+      }
+    }
+
+    // Fallback: changelog vazio (em produção poderia buscar de arquivo local ou outra fonte)
     const changelog = {
       version: sdkVersion,
       deprecated: [],
-      breaking: []
+      breaking: [],
+      source: 'fallback'
     };
 
-    this.changelogCache.set(sdkVersion, changelog);
+    this.changelogCache.set(cacheKey, {
+      data: changelog,
+      timestamp: Date.now()
+    });
+
+    return changelog;
+  }
+
+  /**
+   * Busca changelog de fonte HTTP (GitHub, npm, etc.)
+   * 
+   * @param {string} sdkName - Nome do SDK
+   * @param {string} sdkVersion - Versão do SDK
+   * @returns {Promise<Object|null>} Changelog ou null se não encontrado
+   */
+  async fetchChangelogFromHTTP(sdkName, sdkVersion) {
+    // URLs comuns para changelogs
+    const urls = [
+      `https://raw.githubusercontent.com/nodejs/node/${sdkVersion}/CHANGELOG.md`,
+      `https://registry.npmjs.org/${sdkName}/${sdkVersion}`,
+      `https://api.github.com/repos/${sdkName}/${sdkName}/releases/tags/v${sdkVersion}`
+    ];
+
+    for (const url of urls) {
+      try {
+        const response = await axios.get(url, {
+          timeout: 5000,
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Ultra-IA-CompatibilityAnalyzer'
+          }
+        });
+
+        if (response.status === 200 && response.data) {
+          // Parse básico (em produção seria mais sofisticado)
+          const changelog = this.parseChangelog(response.data, sdkVersion);
+          if (changelog) {
+            this.logger?.info('Changelog obtido via HTTP', { url, sdkName, sdkVersion });
+            return changelog;
+          }
+        }
+      } catch (e) {
+        // Continuar para próxima URL
+        continue;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Faz parse básico de changelog (simplificado)
+   * 
+   * @param {string|Object} data - Dados do changelog
+   * @param {string} version - Versão
+   * @returns {Object|null} Changelog parseado ou null
+   */
+  parseChangelog(data, version) {
+    // Parse simplificado - em produção seria mais robusto
+    const changelog = {
+      version,
+      deprecated: [],
+      breaking: [],
+      source: 'http'
+    };
+
+    // Se data é string (markdown), tentar extrair informações básicas
+    if (typeof data === 'string') {
+      // Procurar por padrões comuns de deprecation e breaking changes
+      const deprecatedMatches = data.match(/deprecated|deprecate/gi);
+      const breakingMatches = data.match(/breaking|BREAKING/gi);
+
+      if (deprecatedMatches) {
+        changelog.deprecated = deprecatedMatches.map((_, i) => ({
+          name: `deprecated_api_${i}`,
+          since: version,
+          alternative: 'Ver documentação'
+        }));
+      }
+
+      if (breakingMatches) {
+        changelog.breaking = breakingMatches.map((_, i) => ({
+          api: `breaking_change_${i}`,
+          since: version,
+          description: 'Breaking change detectado no changelog'
+        }));
+      }
+    }
+
     return changelog;
   }
 
@@ -432,7 +661,7 @@ class MultiEnvironmentCompatibilityAnalyzer extends BaseSystem {
    * @returns {Array<string>} Dependências
    */
   onGetDependencies() {
-    return ['logger', 'config'];
+    return ['logger', 'config', '?EnvironmentDetector'];
   }
 }
 
@@ -444,8 +673,9 @@ export default MultiEnvironmentCompatibilityAnalyzer;
  * @param {Object} config - Configuração
  * @param {Object} logger - Logger
  * @param {Object} errorHandler - Error Handler
+ * @param {Object} environmentDetector - Environment Detector (opcional)
  * @returns {MultiEnvironmentCompatibilityAnalyzer} Instância do MultiEnvironmentCompatibilityAnalyzer
  */
-export function createMultiEnvironmentCompatibilityAnalyzer(config = null, logger = null, errorHandler = null) {
-  return new MultiEnvironmentCompatibilityAnalyzer(config, logger, errorHandler);
+export function createMultiEnvironmentCompatibilityAnalyzer(config = null, logger = null, errorHandler = null, environmentDetector = null) {
+  return new MultiEnvironmentCompatibilityAnalyzer(config, logger, errorHandler, environmentDetector);
 }

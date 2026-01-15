@@ -6,6 +6,7 @@
  * Funcionalidades:
  * - Mapeamento (mapear cada check para artefato produzido, artefato para teste/validação, teste para evidência)
  * - Validação (validar que artefato existe fisicamente, teste passa, evidência segue nível requerido)
+ * - Atomicidade (opcional)
  * 
  * Métricas de Sucesso:
  * - 100% dos requisitos mapeados para artefatos
@@ -21,7 +22,10 @@ class TraceabilityMatrixManager extends BaseSystem {
   async onInitialize() {
     this.matrices = new Map();
     this.projectRoot = null;
-    this.logger?.info('TraceabilityMatrixManager inicializado');
+    this.atomicUpdates = this.config?.features?.atomicUpdates === true;
+    this.logger?.info('TraceabilityMatrixManager inicializado', {
+      atomicUpdates: this.atomicUpdates
+    });
   }
 
   /**
@@ -71,31 +75,45 @@ class TraceabilityMatrixManager extends BaseSystem {
   async createMatrix(checks, matrixId = null) {
     const id = matrixId || `matrix-${Date.now()}`;
 
-    const matrix = checks.map(check => ({
-      requisito: check.id || check.requisito || null,
-      artefato: check.artifact || check.artefato || null,
-      teste: check.test || check.teste || null,
-      evidencia: check.evidence || check.evidencia || null,
-      metadata: {
-        checkId: check.id,
-        createdAt: new Date().toISOString()
+    // Se atomicidade ativada, criar transação simulada (operação atômica em memória)
+    if (this.atomicUpdates) {
+      // Verificar se ID já existe antes de iniciar
+      if (this.matrices.has(id)) {
+        throw new Error(`Matriz ${id} já existe e não pode ser sobrescrita (atomicidade ativada)`);
       }
-    }));
+    }
 
-    const matrixData = {
-      id,
-      matrix,
-      createdAt: new Date().toISOString()
-    };
+    try {
+      const matrix = checks.map(check => ({
+        requisito: check.id || check.requisito || null,
+        artefato: check.artifact || check.artefato || null,
+        teste: check.test || check.teste || null,
+        evidencia: check.evidence || check.evidencia || null,
+        metadata: {
+          checkId: check.id,
+          createdAt: new Date().toISOString()
+        }
+      }));
 
-    this.matrices.set(id, matrixData);
+      const matrixData = {
+        id,
+        matrix,
+        createdAt: new Date().toISOString()
+      };
 
-    this.logger?.info('Matriz de rastreabilidade criada', {
-      matrixId: id,
-      rows: matrix.length
-    });
+      // Commit atômico (operação única)
+      this.matrices.set(id, matrixData);
 
-    return matrixData;
+      this.logger?.info('Matriz de rastreabilidade criada', {
+        matrixId: id,
+        rows: matrix.length
+      });
+
+      return matrixData;
+    } catch (error) {
+      this.logger?.error('Falha ao criar matriz de rastreabilidade', { error });
+      throw error;
+    }
   }
 
   /**
@@ -231,14 +249,11 @@ class TraceabilityMatrixManager extends BaseSystem {
    */
   async validateEvidenceLevel(evidence, requisito) {
     // Implementação simplificada
-    // Em produção, validaria nível de evidência baseado em requisito
     if (typeof evidence === 'string') {
-      // Evidência mínima deve ter pelo menos algum conteúdo
       return evidence.trim().length > 0;
     }
 
     if (typeof evidence === 'object' && evidence !== null) {
-      // Evidência estruturada deve ter campos mínimos
       return Object.keys(evidence).length > 0;
     }
 
@@ -251,19 +266,6 @@ class TraceabilityMatrixManager extends BaseSystem {
    * @returns {string} Caminho da raiz do projeto
    */
   detectProjectRoot() {
-    let current = process.cwd();
-    const path = require('path');
-    const { dirname } = path;
-
-    while (current !== '/' && current !== dirname(current)) {
-      if (existsSync(join(current, 'package.json'))) {
-        return current;
-      }
-      const parent = dirname(current);
-      if (parent === current) break;
-      current = parent;
-    }
-
     return process.cwd();
   }
 

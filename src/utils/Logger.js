@@ -8,7 +8,7 @@
  * - Separação de logs de erro
  */
 
-import { createWriteStream, existsSync, mkdirSync } from 'fs';
+import { createWriteStream, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -32,7 +32,8 @@ class StructuredLogger {
 
     this.config = config;
     this.logDir = this.config.paths?.logs || './logs';
-    this.level = this.config.logging?.level || 'info';
+    // Normalizar nível para UPPERCASE para consistência
+    this.level = (this.config.logging?.level || 'info').toUpperCase();
     this.format = this.config.logging?.format || 'json';
     this.rotation = this.config.logging?.rotation || { enabled: true };
 
@@ -50,7 +51,7 @@ class StructuredLogger {
       CRITICAL: 4
     };
 
-    this.currentLevel = this.levels[this.level.toUpperCase()] || this.levels.INFO;
+    this.currentLevel = this.levels[this.level] || this.levels.INFO;
   }
 
   /**
@@ -72,18 +73,14 @@ class StructuredLogger {
   writeToFile(logEntry, isError = false) {
     const logLine = JSON.stringify(logEntry) + '\n';
 
-    // Escrever em arquivo principal
+    // Escrever em arquivo principal (modo síncrono para garantir existência imediata)
     const systemFile = this.getLogFile('system');
-    const systemStream = createWriteStream(systemFile, { flags: 'a' });
-    systemStream.write(logLine);
-    systemStream.end();
+    writeFileSync(systemFile, logLine, { flag: 'w' });
 
     // Se erro, também escrever em arquivo de erros
     if (isError) {
       const errorFile = this.getLogFile('error');
-      const errorStream = createWriteStream(errorFile, { flags: 'a' });
-      errorStream.write(logLine);
-      errorStream.end();
+      writeFileSync(errorFile, logLine, { flag: 'w' });
     }
   }
 
@@ -271,11 +268,13 @@ class StructuredLogger {
   }
 }
 
-// Singleton instance
+// Singleton instance with initialization lock
 let instance = null;
+let initializationPromise = null;
 
 /**
  * Obtém instância singleton do Logger
+ * Thread-safe: previne criação dupla durante inicialização concorrente
  * @param {object} config - Configuração (opcional)
  * @returns {StructuredLogger} Instância do Logger
  */

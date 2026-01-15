@@ -10,6 +10,9 @@ describe('IntelligentSequentialResolver', () => {
   let mockLogger;
   let mockErrorHandler;
   let mockConfig;
+  let mockASTParser;
+  let mockBaselineManager;
+  let mockDockerSandbox;
 
   beforeEach(() => {
     mockLogger = {
@@ -23,9 +26,35 @@ describe('IntelligentSequentialResolver', () => {
       handleError: vi.fn()
     };
 
-    mockConfig = { test: true };
+    mockConfig = { 
+      test: true,
+      features: {
+        useASTValidation: true,
+        useBaselineComparison: true,
+        useDockerValidation: false // Desabilitado por padrão nos testes
+      }
+    };
 
-    resolver = createIntelligentSequentialResolver(mockConfig, mockLogger, mockErrorHandler);
+    mockASTParser = {
+      parse: vi.fn()
+    };
+
+    mockBaselineManager = {
+      execute: vi.fn()
+    };
+
+    mockDockerSandbox = {
+      execute: vi.fn()
+    };
+
+    resolver = createIntelligentSequentialResolver(
+      mockConfig, 
+      mockLogger, 
+      mockErrorHandler,
+      mockASTParser,
+      mockBaselineManager,
+      mockDockerSandbox
+    );
   });
 
   describe('initialize', () => {
@@ -213,6 +242,156 @@ describe('IntelligentSequentialResolver', () => {
       expect(resolver.onValidate(null).valid).toBe(false);
       expect(resolver.onValidate({}).valid).toBe(false);
       expect(resolver.onValidate({ errors: 'not-array' }).valid).toBe(false);
+    });
+  });
+
+  describe('validateFix com ASTParser', () => {
+    beforeEach(async () => {
+      await resolver.initialize();
+    });
+
+    it('deve usar ASTParser para validar sintaxe quando disponível', async () => {
+      mockASTParser.parse.mockReturnValue({
+        valid: true,
+        structure: { functions: 2, classes: 1, imports: 1, exports: 1 },
+        securityIssues: []
+      });
+
+      const fixResult = {
+        changesApplied: true,
+        fix: {
+          changes: [{
+            file: 'test.js',
+            type: 'syntax'
+          }]
+        }
+      };
+
+      const codebase = {
+        files: {
+          'test.js': { content: 'function test() { return true; }' }
+        }
+      };
+
+      const validation = await resolver.validateFix(fixResult, codebase);
+
+      expect(validation.success).toBe(true);
+      expect(mockASTParser.parse).toHaveBeenCalled();
+      expect(validation.validationDetails['test.js']).toBeDefined();
+    });
+
+    it('deve detectar erros de sintaxe com ASTParser', async () => {
+      mockASTParser.parse.mockReturnValue({
+        valid: false,
+        errors: [{
+          line: 1,
+          column: 5,
+          message: 'Unexpected token'
+        }]
+      });
+
+      const fixResult = {
+        changesApplied: true,
+        fix: {
+          changes: [{
+            file: 'test.js',
+            type: 'syntax'
+          }]
+        }
+      };
+
+      const codebase = {
+        files: {
+          'test.js': { content: 'function test() { return' }
+        }
+      };
+
+      const validation = await resolver.validateFix(fixResult, codebase);
+
+      expect(validation.success).toBe(false);
+      expect(validation.errors.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('analyzeCascadeImpact com BaselineManager', () => {
+    beforeEach(async () => {
+      await resolver.initialize();
+    });
+
+    it('deve criar baseline antes da análise quando BaselineManager disponível', async () => {
+      mockBaselineManager.execute.mockResolvedValue({
+        timestamp: '2026-01-14T15:00:00Z',
+        system: 'IntelligentSequentialResolver',
+        environment: { os: { platform: 'linux' } }
+      });
+
+      const error = { id: 'error1', file: 'file1.js' };
+      const codebase = {
+        files: {
+          'file1.js': { imports: [] },
+          'file2.js': { imports: ['file1.js'] }
+        }
+      };
+
+      const impact = await resolver.analyzeCascadeImpact(error, codebase, []);
+
+      expect(impact).toBeDefined();
+      expect(impact.baselineBefore).toBeDefined();
+      expect(mockBaselineManager.execute).toHaveBeenCalled();
+    });
+  });
+
+  describe('generateFix com ASTParser', () => {
+    it('deve usar ASTParser para análise estrutural quando disponível', () => {
+      mockASTParser.parse.mockReturnValue({
+        valid: false,
+        errors: [{
+          line: 5,
+          column: 10,
+          message: 'Missing semicolon'
+        }],
+        structure: null
+      });
+
+      const error = { id: 'error1', file: 'test.js', type: 'syntax_error' };
+      const codebase = {
+        files: {
+          'test.js': { content: 'function test() { return true' }
+        }
+      };
+
+      const fix = resolver.generateFix(error, codebase);
+
+      expect(fix).toBeDefined();
+      expect(fix.type).toBe('syntax_fix');
+      expect(fix.changes.length).toBeGreaterThan(0);
+      expect(mockASTParser.parse).toHaveBeenCalled();
+    });
+
+    it('deve detectar problemas de segurança com ASTParser', () => {
+      mockASTParser.parse.mockReturnValue({
+        valid: true,
+        structure: { functions: 1, classes: 0, imports: 0, exports: 0 },
+        securityIssues: [{
+          type: 'eval_usage',
+          severity: 'critical',
+          line: 3,
+          message: 'Uso de eval() é perigoso'
+        }]
+      });
+
+      const error = { id: 'error1', file: 'test.js', type: 'security_error' };
+      const codebase = {
+        files: {
+          'test.js': { content: 'eval("console.log(1)")' }
+        }
+      };
+
+      const fix = resolver.generateFix(error, codebase);
+
+      expect(fix.type).toBe('security_fix');
+      expect(fix.changes.length).toBeGreaterThan(0);
+      expect(fix.changes[0].type).toBe('security');
     });
   });
 });

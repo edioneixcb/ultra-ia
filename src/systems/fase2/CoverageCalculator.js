@@ -15,17 +15,38 @@
  */
 
 import BaseSystem from '../../core/BaseSystem.js';
+import { getCacheManager } from '../../utils/CacheManager.js';
 
 class CoverageCalculator extends BaseSystem {
+  constructor(config = null, logger = null, errorHandler = null) {
+    super(config, logger, errorHandler);
+    this.cacheManager = null;
+    this.useCache = config?.features?.useCache !== false;
+  }
+
   async onInitialize() {
     this.calculations = new Map();
     this.universeOfFailures = new Set(); // U = {F₁, F₂, ..., Fₙ}
     this.checkToFailures = new Map(); // Cⱼ → {Fᵢ, Fⱼ, ...}
-    this.logger?.info('CoverageCalculator inicializado');
+    
+    // Inicializar cache LRU se habilitado
+    if (this.useCache) {
+      try {
+        this.cacheManager = getCacheManager(this.config, this.logger);
+        this.logger?.debug('CacheManager integrado no CoverageCalculator');
+      } catch (e) {
+        this.logger?.warn('Erro ao obter CacheManager, continuando sem cache', { error: e.message });
+        this.useCache = false;
+      }
+    }
+    
+    this.logger?.info('CoverageCalculator inicializado', {
+      useCache: this.useCache
+    });
   }
 
   /**
-   * Calcula cobertura
+   * Calcula cobertura (com cache)
    * 
    * @param {Object} context - Contexto com targets e checks
    * @returns {Promise<Object>} Cobertura calculada
@@ -39,6 +60,18 @@ class CoverageCalculator extends BaseSystem {
 
     if (!checks || !Array.isArray(checks)) {
       throw new Error('checks é obrigatório e deve ser um array');
+    }
+
+    // Gerar chave de cache
+    const cacheKey = this.generateCacheKey(targets, checks);
+    
+    // Verificar cache se habilitado
+    if (this.useCache && this.cacheManager) {
+      const cached = this.cacheManager.get(cacheKey);
+      if (cached) {
+        this.logger?.debug('Cobertura retornada do cache', { calculationId });
+        return cached;
+      }
     }
 
     this.logger?.info('Calculando cobertura', {
@@ -57,6 +90,9 @@ class CoverageCalculator extends BaseSystem {
       await this.mapChecksToFailures(checks);
     }
 
+    // Obter resultados de testes se disponível no contexto
+    const testResults = context.testResults || null;
+
     // Calcular cobertura para cada alvo
     const targetCoverages = [];
     for (const target of targets) {
@@ -64,7 +100,10 @@ class CoverageCalculator extends BaseSystem {
         !c.target || c.target === target || (Array.isArray(c.target) && c.target.includes(target))
       );
 
-      const coverage = await this.calculateCoverageForTarget(target, applicableChecks);
+      // Filtrar resultados de testes por alvo se disponível
+      const targetTestResults = testResults?.targets?.[target] || null;
+
+      const coverage = await this.calculateCoverageForTarget(target, applicableChecks, targetTestResults);
       targetCoverages.push(coverage);
     }
 
@@ -89,36 +128,127 @@ class CoverageCalculator extends BaseSystem {
       calculatedAt: new Date().toISOString()
     });
 
+    // Armazenar no cache se habilitado
+    if (this.useCache && this.cacheManager && cacheKey) {
+      this.cacheManager.set(cacheKey, result, 1800000); // Cache por 30 minutos
+    }
+
     return result;
   }
 
   /**
-   * Define universo de falhas
+   * Gera chave de cache para targets e checks
+   * 
+   * @param {Array} targets - Lista de alvos
+   * @param {Array} checks - Lista de checks
+   * @returns {string} Chave de cache
+   */
+  generateCacheKey(targets, checks) {
+    const targetIds = targets.map(t => typeof t === 'string' ? t : t.id || t.name).sort().join('|');
+    const checkIds = checks.map(c => c.id || c.name).sort().join('|');
+    return `coverage:${targetIds}:${checkIds}`;
+  }
+
+  /**
+   * Define universo de falhas real baseado em classes conhecidas de falhas
    * 
    * @param {Array<Object>} checks - Lista de checks
    * @returns {Promise<void>}
    */
   async defineUniverseOfFailures(checks) {
+    // Classes fundamentais de falhas (baseado em taxonomia de erros de software)
+    const fundamentalFailures = new Set([
+      // Falhas de Sintaxe
+      'syntax_error',
+      'parse_error',
+      'token_error',
+      
+      // Falhas de Tipo
+      'type_error',
+      'type_mismatch',
+      'null_reference',
+      'undefined_reference',
+      
+      // Falhas de Referência
+      'reference_error',
+      'not_defined',
+      'cannot_find',
+      
+      // Falhas de Import/Module
+      'import_error',
+      'module_not_found',
+      'circular_dependency',
+      
+      // Falhas de Runtime
+      'runtime_error',
+      'execution_error',
+      'timeout_error',
+      
+      // Falhas de Lógica
+      'logic_error',
+      'off_by_one',
+      'infinite_loop',
+      
+      // Falhas de Segurança
+      'security_vulnerability',
+      'injection_risk',
+      'xss_risk',
+      
+      // Falhas de Performance
+      'performance_issue',
+      'memory_leak',
+      'cpu_usage',
+      
+      // Falhas de Concorrência
+      'race_condition',
+      'deadlock',
+      'starvation',
+      
+      // Falhas de Integração
+      'api_error',
+      'network_error',
+      'connection_timeout',
+      
+      // Falhas de Dados
+      'data_corruption',
+      'data_loss',
+      'invalid_data',
+      
+      // Falhas de Configuração
+      'config_error',
+      'missing_config',
+      'invalid_config'
+    ]);
+
     // Extrair classes de falha dos checks
-    const failures = new Set();
+    const checkFailures = new Set();
 
     for (const check of checks) {
       if (check.failures && Array.isArray(check.failures)) {
-        check.failures.forEach(f => failures.add(f));
+        check.failures.forEach(f => {
+          checkFailures.add(f);
+          fundamentalFailures.add(f); // Adicionar ao universo fundamental
+        });
       } else if (check.failureClass) {
-        failures.add(check.failureClass);
+        checkFailures.add(check.failureClass);
+        fundamentalFailures.add(check.failureClass);
       } else {
         // Inferir classe de falha do tipo de check
         const inferred = this.inferFailureClass(check);
         if (inferred) {
-          failures.add(inferred);
+          checkFailures.add(inferred);
+          fundamentalFailures.add(inferred);
         }
       }
     }
 
-    this.universeOfFailures = failures;
+    // Combinar falhas fundamentais com falhas dos checks
+    this.universeOfFailures = fundamentalFailures;
+    
     this.logger?.info('Universo de falhas definido', {
-      size: failures.size
+      size: fundamentalFailures.size,
+      fromChecks: checkFailures.size,
+      fundamental: fundamentalFailures.size - checkFailures.size
     });
   }
 
@@ -168,18 +298,25 @@ class CoverageCalculator extends BaseSystem {
   }
 
   /**
-   * Calcula cobertura para um alvo
+   * Calcula cobertura para um alvo, integrando com testes quando disponível
    * 
    * @param {string} target - Alvo
    * @param {Array<Object>} applicableChecks - Checks aplicáveis
+   * @param {Object} testResults - Resultados de testes (opcional)
    * @returns {Promise<Object>} Cobertura do alvo
    */
-  async calculateCoverageForTarget(target, applicableChecks) {
+  async calculateCoverageForTarget(target, applicableChecks, testResults = null) {
     const coveredFailures = new Set();
 
+    // Mapear checks para falhas
     for (const check of applicableChecks) {
       const failures = this.checkToFailures.get(check.id || check.name) || [];
       failures.forEach(f => coveredFailures.add(f));
+    }
+
+    // Se testResults disponível, adicionar falhas cobertas por testes
+    if (testResults && testResults.failures) {
+      testResults.failures.forEach(f => coveredFailures.add(f));
     }
 
     const totalFailures = this.universeOfFailures.size;
@@ -187,7 +324,7 @@ class CoverageCalculator extends BaseSystem {
       ? (coveredFailures.size / totalFailures) * 100
       : 0;
 
-    return {
+    const result = {
       target,
       coverage: coveredFailures.size,
       totalFailures,
@@ -195,6 +332,18 @@ class CoverageCalculator extends BaseSystem {
       coveredFailures: Array.from(coveredFailures),
       applicableChecks: applicableChecks.length
     };
+
+    // Adicionar informações de testes se disponível
+    if (testResults) {
+      result.testCoverage = {
+        testsRun: testResults.testsRun || 0,
+        testsPassed: testResults.testsPassed || 0,
+        testsFailed: testResults.testsFailed || 0,
+        failuresFromTests: testResults.failures?.length || 0
+      };
+    }
+
+    return result;
   }
 
   /**

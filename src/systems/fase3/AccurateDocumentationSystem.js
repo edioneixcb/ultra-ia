@@ -15,13 +15,40 @@
  */
 
 import BaseSystem from '../../core/BaseSystem.js';
+import { getCacheManager } from '../../utils/CacheManager.js';
 
 class AccurateDocumentationSystem extends BaseSystem {
+  constructor(config = null, logger = null, errorHandler = null, evidenceChainManager = null, astParser = null) {
+    super(config, logger, errorHandler);
+    this.evidenceChainManager = evidenceChainManager;
+    this.astParser = astParser;
+    this.useEvidenceChain = config?.features?.useEvidenceChain !== false && evidenceChainManager !== null;
+    this.useASTAnalysis = config?.features?.useASTAnalysis !== false && astParser !== null;
+    this.cacheManager = null;
+    this.useCache = config?.features?.useCache !== false;
+  }
+
   async onInitialize() {
     this.validations = new Map();
     this.documentationCache = new Map();
     this.traceabilityMap = new Map();
-    this.logger?.info('AccurateDocumentationSystem inicializado');
+    
+    // Inicializar cache LRU se habilitado
+    if (this.useCache) {
+      try {
+        this.cacheManager = getCacheManager(this.config, this.logger);
+        this.logger?.debug('CacheManager integrado no AccurateDocumentationSystem');
+      } catch (e) {
+        this.logger?.warn('Erro ao obter CacheManager, continuando sem cache', { error: e.message });
+        this.useCache = false;
+      }
+    }
+    
+    this.logger?.info('AccurateDocumentationSystem inicializado', {
+      useEvidenceChain: this.useEvidenceChain,
+      useASTAnalysis: this.useASTAnalysis,
+      useCache: this.useCache
+    });
   }
 
   /**
@@ -196,72 +223,261 @@ class AccurateDocumentationSystem extends BaseSystem {
   }
 
   /**
-   * Coleta evidências diretas do codebase
+   * Coleta evidências diretas do codebase usando ASTParser quando disponível (com cache)
    * 
    * @param {Object} claim - Afirmação
    * @param {Object} codebase - Codebase
    * @returns {Promise<Object>} Evidências coletadas
    */
   async collectDirectEvidence(claim, codebase) {
+    // Verificar cache se habilitado
+    if (this.useCache && this.cacheManager) {
+      const cacheKey = `evidence:${claim.type}:${claim.name}:${codebase.hash || 'default'}`;
+      const cached = this.cacheManager.get(cacheKey);
+      if (cached) {
+        this.logger?.debug('Evidência retornada do cache', { claim: claim.name });
+        return cached;
+      }
+    }
+
     const evidence = {
       found: false,
       location: null,
       code: null,
-      matches: []
+      matches: [],
+      source: 'regex' // ou 'ast' se usar ASTParser
     };
 
     if (!codebase.files) {
       return evidence;
     }
 
-    // Buscar no codebase
-    for (const [fileName, fileData] of Object.entries(codebase.files)) {
-      const fileContent = fileData.content || fileData.code || '';
+    // Se ASTParser disponível, usar análise estrutural real
+    if (this.useASTAnalysis && this.astParser) {
+      for (const [fileName, fileData] of Object.entries(codebase.files)) {
+        const fileContent = fileData.content || fileData.code || '';
+        if (!fileContent) continue;
 
-      if (claim.type === 'function') {
-        const functionRegex = new RegExp(`(?:function|const|let)\\s+${claim.name}\\s*[=\\(]`, 'g');
-        if (functionRegex.test(fileContent)) {
-          evidence.found = true;
-          evidence.location = fileName;
-          evidence.matches.push({
-            type: 'function',
-            name: claim.name,
-            file: fileName
-          });
-        }
-      } else if (claim.type === 'class') {
-        const classRegex = new RegExp(`class\\s+${claim.name}`, 'g');
-        if (classRegex.test(fileContent)) {
-          evidence.found = true;
-          evidence.location = fileName;
-          evidence.matches.push({
-            type: 'class',
-            name: claim.name,
-            file: fileName
+        try {
+          const astResult = this.astParser.parse(fileContent);
+          
+          if (astResult.valid && astResult.ast) {
+            // Buscar no AST
+            const found = this.searchInAST(astResult.ast, claim);
+            
+            if (found) {
+              evidence.found = true;
+              evidence.location = fileName;
+              evidence.source = 'ast';
+              evidence.matches.push({
+                type: claim.type,
+                name: claim.name,
+                file: fileName,
+                line: found.line || null,
+                column: found.column || null
+              });
+              
+              // Extrair código relevante se possível
+              if (found.node) {
+                evidence.code = this.extractCodeFromAST(found.node, fileContent);
+              }
+            }
+          }
+        } catch (e) {
+          this.logger?.warn('Erro ao analisar arquivo com ASTParser, usando regex', {
+            file: fileName,
+            error: e.message
           });
         }
       }
+    }
+
+    // Fallback: busca com regex se AST não encontrou ou não disponível
+    if (!evidence.found) {
+      for (const [fileName, fileData] of Object.entries(codebase.files)) {
+        const fileContent = fileData.content || fileData.code || '';
+
+        if (claim.type === 'function') {
+          const functionRegex = new RegExp(`(?:function|const|let)\\s+${claim.name}\\s*[=\\(]`, 'g');
+          if (functionRegex.test(fileContent)) {
+            evidence.found = true;
+            evidence.location = fileName;
+            evidence.source = 'regex';
+            evidence.matches.push({
+              type: 'function',
+              name: claim.name,
+              file: fileName
+            });
+          }
+        } else if (claim.type === 'class') {
+          const classRegex = new RegExp(`class\\s+${claim.name}`, 'g');
+          if (classRegex.test(fileContent)) {
+            evidence.found = true;
+            evidence.location = fileName;
+            evidence.source = 'regex';
+            evidence.matches.push({
+              type: 'class',
+              name: claim.name,
+              file: fileName
+            });
+          }
+        }
+      }
+    }
+
+    // Se EvidenceChainManager disponível, criar cadeia de evidência
+    if (this.useEvidenceChain && this.evidenceChainManager && evidence.found) {
+      try {
+        const chainId = `doc-evidence-${Date.now()}`;
+        await this.evidenceChainManager.execute({
+          action: 'create',
+          observation: {
+            type: 'documentation_claim',
+            target: claim.name,
+            description: `Validação de afirmação sobre ${claim.name}`
+          },
+          chainId
+        });
+
+        await this.evidenceChainManager.execute({
+          action: 'addRawEvidence',
+          chainId,
+          rawEvidence: evidence
+        });
+
+        evidence.chainId = chainId;
+      } catch (e) {
+        this.logger?.warn('Erro ao criar cadeia de evidência', { error: e.message });
+      }
+    }
+
+    // Armazenar no cache se habilitado
+    if (this.useCache && this.cacheManager) {
+      const cacheKey = `evidence:${claim.type}:${claim.name}:${codebase.hash || 'default'}`;
+      this.cacheManager.set(cacheKey, evidence, 7200000); // Cache por 2 horas
     }
 
     return evidence;
   }
 
   /**
-   * Valida afirmação contra evidências
+   * Busca afirmação no AST
+   * 
+   * @param {Object} ast - Árvore AST
+   * @param {Object} claim - Afirmação
+   * @returns {Object|null} Nó encontrado ou null
+   */
+  searchInAST(ast, claim) {
+    let found = null;
+
+    const walk = (node) => {
+      if (found || !node) return;
+
+      if (claim.type === 'function') {
+        if ((node.type === 'FunctionDeclaration' && node.id?.name === claim.name) ||
+            (node.type === 'FunctionExpression' && node.id?.name === claim.name) ||
+            (node.type === 'VariableDeclarator' && node.id?.name === claim.name && 
+             (node.init?.type === 'FunctionExpression' || node.init?.type === 'ArrowFunctionExpression'))) {
+          found = {
+            node,
+            line: node.loc?.start?.line,
+            column: node.loc?.start?.column
+          };
+        }
+      } else if (claim.type === 'class') {
+        if (node.type === 'ClassDeclaration' && node.id?.name === claim.name) {
+          found = {
+            node,
+            line: node.loc?.start?.line,
+            column: node.loc?.start?.column
+          };
+        }
+      }
+
+      // Percorrer filhos
+      for (const key in node) {
+        if (node[key] && typeof node[key] === 'object') {
+          if (Array.isArray(node[key])) {
+            node[key].forEach(child => walk(child));
+          } else if (node[key].type) {
+            walk(node[key]);
+          }
+        }
+      }
+    };
+
+    walk(ast);
+    return found;
+  }
+
+  /**
+   * Extrai código relevante do nó AST
+   * 
+   * @param {Object} node - Nó AST
+   * @param {string} fileContent - Conteúdo do arquivo
+   * @returns {string} Código extraído
+   */
+  extractCodeFromAST(node, fileContent) {
+    if (node.loc && node.loc.start && node.loc.end) {
+      const lines = fileContent.split('\n');
+      const startLine = node.loc.start.line - 1;
+      const endLine = node.loc.end.line;
+      return lines.slice(startLine, endLine).join('\n');
+    }
+    return null;
+  }
+
+  /**
+   * Valida afirmação contra evidências com validação cross-reference
    * 
    * @param {Object} claim - Afirmação
    * @param {Object} evidence - Evidências
    * @returns {Promise<Object>} Resultado da validação
    */
   async validateClaim(claim, evidence) {
-    return {
+    const validation = {
       valid: evidence.found,
       claim,
       evidence,
       reason: evidence.found 
         ? 'Evidência encontrada no codebase'
-        : 'Evidência não encontrada no codebase'
+        : 'Evidência não encontrada no codebase',
+      crossReferences: []
     };
+
+    // Se evidência encontrada e EvidenceChainManager disponível, validar cadeia
+    if (evidence.found && evidence.chainId && this.useEvidenceChain && this.evidenceChainManager) {
+      try {
+        const chain = await this.evidenceChainManager.execute({
+          action: 'get',
+          chainId: evidence.chainId
+        });
+
+        if (chain) {
+          validation.crossReferences.push({
+            type: 'evidence_chain',
+            chainId: evidence.chainId,
+            validated: true
+          });
+        }
+      } catch (e) {
+        this.logger?.warn('Erro ao validar cadeia de evidência', { error: e.message });
+      }
+    }
+
+    // Validar que evidência corresponde exatamente à afirmação
+    if (evidence.found && evidence.matches.length > 0) {
+      const exactMatch = evidence.matches.some(m => 
+        m.name === claim.name && m.type === claim.type
+      );
+      
+      if (!exactMatch) {
+        validation.valid = false;
+        validation.reason = 'Evidência encontrada mas não corresponde exatamente à afirmação';
+      }
+    }
+
+    return validation;
   }
 
   /**
@@ -428,7 +644,7 @@ class AccurateDocumentationSystem extends BaseSystem {
    * @returns {Array<string>} Dependências
    */
   onGetDependencies() {
-    return ['logger', 'config'];
+    return ['logger', 'config', '?EvidenceChainManager', '?ASTParser'];
   }
 }
 
@@ -440,8 +656,10 @@ export default AccurateDocumentationSystem;
  * @param {Object} config - Configuração
  * @param {Object} logger - Logger
  * @param {Object} errorHandler - Error Handler
+ * @param {Object} evidenceChainManager - Evidence Chain Manager (opcional)
+ * @param {Object} astParser - AST Parser (opcional)
  * @returns {AccurateDocumentationSystem} Instância do AccurateDocumentationSystem
  */
-export function createAccurateDocumentationSystem(config = null, logger = null, errorHandler = null) {
-  return new AccurateDocumentationSystem(config, logger, errorHandler);
+export function createAccurateDocumentationSystem(config = null, logger = null, errorHandler = null, evidenceChainManager = null, astParser = null) {
+  return new AccurateDocumentationSystem(config, logger, errorHandler, evidenceChainManager, astParser);
 }

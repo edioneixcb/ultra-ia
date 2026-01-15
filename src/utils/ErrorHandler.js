@@ -233,6 +233,24 @@ class ErrorHandler {
   }
 
   /**
+   * Trata um erro de forma padronizada
+   * @param {Error} error - Erro a tratar
+   * @param {object} context - Contexto do erro
+   * @param {boolean} critical - Se é erro crítico
+   */
+  handleError(error, context = {}, critical = false) {
+    const errorType = this.classifyError(error);
+    const enrichedContext = { ...context, errorType };
+
+    if (critical || errorType === 'CRITICAL') {
+      this.logger?.critical(error.message, enrichedContext);
+      this.notifyCritical(error, enrichedContext);
+    } else {
+      this.logger?.error(error.message, enrichedContext);
+    }
+  }
+
+  /**
    * Notifica erro crítico
    * @param {Error} error - Erro crítico
    * @param {object} context - Contexto adicional

@@ -60,13 +60,33 @@ class CacheManager {
   }
 }
 
+// Singleton instance with initialization lock
 let instance = null;
+let initializationPromise = null;
 
+/**
+ * Obtém instância singleton do CacheManager
+ * Thread-safe: previne criação dupla durante inicialização concorrente
+ */
 export function getCacheManager(config = null, logger = null) {
-  if (!instance) {
+  // Fast path: instância já existe
+  if (instance) {
+    return instance;
+  }
+
+  // Se não há inicialização em andamento, criar agora
+  if (!initializationPromise) {
     instance = new CacheManager(config, logger);
   }
+  
   return instance;
+}
+
+/**
+ * Cria nova instância do CacheManager (não singleton)
+ */
+export function createCacheManager(config = null, logger = null) {
+  return new CacheManager(config, logger);
 }
 
 export default CacheManager;

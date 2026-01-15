@@ -16,12 +16,50 @@
  */
 
 import BaseSystem from '../../core/BaseSystem.js';
+import { getComponentRegistry } from '../../core/index.js';
 
 class BatchResolver extends BaseSystem {
+  constructor(config = null, logger = null, errorHandler = null) {
+    super(config, logger, errorHandler);
+    // Não injetar IntelligentSequentialResolver diretamente para evitar dependência circular
+    // Usar lazy loading quando necessário
+    this.intelligentSequentialResolver = null;
+    this.useIntelligentResolver = config?.features?.useIntelligentResolver !== false;
+  }
+
   async onInitialize() {
     this.batches = new Map();
     this.resolutions = new Map();
-    this.logger?.info('BatchResolver inicializado');
+    this.logger?.info('BatchResolver inicializado', {
+      useIntelligentResolver: this.useIntelligentResolver
+    });
+  }
+
+  /**
+   * Obtém IntelligentSequentialResolver via lazy loading para evitar dependência circular
+   * 
+   * @returns {Object|null} IntelligentSequentialResolver ou null
+   */
+  getIntelligentSequentialResolver() {
+    if (!this.useIntelligentResolver) {
+      return null;
+    }
+
+    // Lazy loading: buscar do registry apenas quando necessário
+    if (!this.intelligentSequentialResolver) {
+      try {
+        const registry = getComponentRegistry();
+        this.intelligentSequentialResolver = registry.get('IntelligentSequentialResolver');
+        if (this.intelligentSequentialResolver) {
+          this.logger?.debug('IntelligentSequentialResolver obtido via lazy loading');
+        }
+      } catch (e) {
+        this.logger?.warn('Erro ao obter IntelligentSequentialResolver, continuando sem integração', { error: e.message });
+        return null;
+      }
+    }
+
+    return this.intelligentSequentialResolver;
   }
 
   /**
@@ -168,7 +206,7 @@ class BatchResolver extends BaseSystem {
   }
 
   /**
-   * Resolve grupo de erros em lote
+   * Resolve grupo de erros em lote, integrando com IntelligentSequentialResolver quando disponível
    * 
    * @param {Object} errorGroup - Grupo de erros
    * @param {Object} codebase - Codebase
@@ -176,6 +214,43 @@ class BatchResolver extends BaseSystem {
    */
   async resolveBatch(errorGroup, codebase) {
     try {
+      // Se IntelligentSequentialResolver disponível, usar para resolução sequencial inteligente
+      const intelligentResolver = this.getIntelligentSequentialResolver();
+      if (intelligentResolver && this.useIntelligentResolver) {
+        try {
+          this.logger?.debug('Usando IntelligentSequentialResolver para resolução em lote', {
+            groupId: errorGroup.id,
+            errorCount: errorGroup.errors.length
+          });
+
+          const sequentialResult = await intelligentResolver.execute({
+            errors: errorGroup.errors,
+            codebase,
+            resolutionId: `batch-${errorGroup.id}`
+          });
+
+          if (sequentialResult.successRate === 100) {
+            return {
+              success: true,
+              groupId: errorGroup.id,
+              errorsResolved: sequentialResult.resolved,
+              method: 'intelligent_sequential',
+              sequentialResult
+            };
+          } else {
+            // Se resolução sequencial não resolveu tudo, continuar com método batch padrão
+            this.logger?.warn('Resolução sequencial não resolveu todos os erros, usando método batch', {
+              successRate: sequentialResult.successRate
+            });
+          }
+        } catch (e) {
+          this.logger?.warn('Erro ao usar IntelligentSequentialResolver, usando método batch padrão', {
+            error: e.message
+          });
+        }
+      }
+
+      // Método batch padrão (fallback ou quando IntelligentSequentialResolver não disponível)
       // Analisar impacto
       const impactAnalysis = await this.analyzeImpact(errorGroup, codebase);
 
@@ -214,7 +289,8 @@ class BatchResolver extends BaseSystem {
         groupId: errorGroup.id,
         errorsResolved: errorGroup.errors.length,
         fix,
-        validation
+        validation,
+        method: 'batch'
       };
 
     } catch (error) {

@@ -16,13 +16,53 @@
  */
 
 import BaseSystem from '../../core/BaseSystem.js';
+import { getKnowledgeBase } from '../../components/DynamicKnowledgeBase.js';
+import { getCacheManager } from '../../utils/CacheManager.js';
 
 class ForensicAnalyzer extends BaseSystem {
+  constructor(config = null, logger = null, errorHandler = null, absoluteCertaintyAnalyzer = null, evidenceChainManager = null) {
+    super(config, logger, errorHandler);
+    this.absoluteCertaintyAnalyzer = absoluteCertaintyAnalyzer;
+    this.evidenceChainManager = evidenceChainManager;
+    this.useAbsoluteCertainty = config?.features?.useAbsoluteCertainty !== false && absoluteCertaintyAnalyzer !== null;
+    this.useEvidenceChain = config?.features?.useEvidenceChain !== false && evidenceChainManager !== null;
+    this.loadPatternsFromKB = config?.features?.loadPatternsFromKB !== false;
+    this.knowledgeBase = null;
+    this.cacheManager = null;
+    this.useCache = config?.features?.useCache !== false;
+  }
+
   async onInitialize() {
     this.analyses = new Map();
     this.knownPatterns = new Map();
     this.evidenceCache = new Map();
-    this.logger?.info('ForensicAnalyzer inicializado');
+    
+    // Inicializar cache LRU se habilitado
+    if (this.useCache) {
+      try {
+        this.cacheManager = getCacheManager(this.config, this.logger);
+        this.logger?.debug('CacheManager integrado no ForensicAnalyzer');
+      } catch (e) {
+        this.logger?.warn('Erro ao obter CacheManager, continuando sem cache', { error: e.message });
+        this.useCache = false;
+      }
+    }
+    
+    // Carregar padrões da Knowledge Base se habilitado
+    if (this.loadPatternsFromKB) {
+      try {
+        this.knowledgeBase = getKnowledgeBase(this.config, this.logger);
+        await this.loadPatternsFromKnowledgeBase();
+      } catch (e) {
+        this.logger?.warn('Erro ao carregar padrões da Knowledge Base, usando padrões padrão', { error: e.message });
+      }
+    }
+
+    this.logger?.info('ForensicAnalyzer inicializado', {
+      useAbsoluteCertainty: this.useAbsoluteCertainty,
+      useEvidenceChain: this.useEvidenceChain,
+      patternsLoaded: this.knownPatterns.size
+    });
   }
 
   /**
@@ -131,36 +171,57 @@ class ForensicAnalyzer extends BaseSystem {
   }
 
   /**
-   * Identifica padrão conhecido
+   * Identifica padrão conhecido (com cache)
    * 
    * @param {Object} error - Erro
    * @param {Object} context - Contexto
    * @returns {Promise<Object|null>} Padrão identificado ou null
    */
   async identifyPattern(error, context) {
+    // Verificar cache se habilitado
+    if (this.useCache && this.cacheManager) {
+      const cacheKey = `pattern:${error.id || error.message}:${error.type || 'unknown'}`;
+      const cached = this.cacheManager.get(cacheKey);
+      if (cached) {
+        this.logger?.debug('Padrão retornado do cache');
+        return cached;
+      }
+    }
+
     // Comparar com padrões conhecidos
+    let matchedPattern = null;
     for (const [patternId, pattern] of this.knownPatterns.entries()) {
       if (this.matchesPattern(error, pattern)) {
-        return {
+        matchedPattern = {
           id: patternId,
           ...pattern,
           confidence: this.calculatePatternConfidence(error, pattern)
         };
+        break;
       }
     }
 
     // Padrões comuns
-    const commonPatterns = this.getCommonPatterns();
-    for (const pattern of commonPatterns) {
-      if (this.matchesPattern(error, pattern)) {
-        return {
-          ...pattern,
-          confidence: this.calculatePatternConfidence(error, pattern)
-        };
+    if (!matchedPattern) {
+      const commonPatterns = this.getCommonPatterns();
+      for (const pattern of commonPatterns) {
+        if (this.matchesPattern(error, pattern)) {
+          matchedPattern = {
+            ...pattern,
+            confidence: this.calculatePatternConfidence(error, pattern)
+          };
+          break;
+        }
       }
     }
 
-    return null;
+    // Armazenar no cache se habilitado e padrão encontrado
+    if (matchedPattern && this.useCache && this.cacheManager) {
+      const cacheKey = `pattern:${error.id || error.message}:${error.type || 'unknown'}`;
+      this.cacheManager.set(cacheKey, matchedPattern, 3600000); // Cache por 1 hora
+    }
+
+    return matchedPattern;
   }
 
   /**
@@ -222,6 +283,49 @@ class ForensicAnalyzer extends BaseSystem {
   }
 
   /**
+   * Carrega padrões da Knowledge Base
+   * 
+   * @returns {Promise<void>}
+   */
+  async loadPatternsFromKnowledgeBase() {
+    if (!this.knowledgeBase) return;
+
+    try {
+      // Buscar padrões de erro conhecidos da tabela error_patterns (se existir)
+      // Por enquanto, usar padrões hardcoded mas preparar estrutura para KB
+      const commonPatterns = this.getCommonPatterns();
+      
+      for (const pattern of commonPatterns) {
+        this.knownPatterns.set(pattern.id, pattern);
+      }
+
+      // Tentar buscar padrões da KB (se tabela existir)
+      try {
+        const db = this.knowledgeBase.db;
+        const patterns = db.prepare('SELECT id, name, message_pattern, type_pattern, solution FROM error_patterns LIMIT 100').all();
+        
+        for (const row of patterns) {
+          this.knownPatterns.set(row.id, {
+            id: row.id,
+            name: row.name,
+            messagePattern: row.message_pattern,
+            typePattern: row.type_pattern,
+            solution: row.solution,
+            source: 'knowledge_base'
+          });
+        }
+
+        this.logger?.info('Padrões carregados da Knowledge Base', { count: patterns.length });
+      } catch (e) {
+        // Tabela pode não existir ainda - usar padrões hardcoded
+        this.logger?.debug('Tabela error_patterns não encontrada, usando padrões padrão');
+      }
+    } catch (e) {
+      this.logger?.warn('Erro ao carregar padrões da KB', { error: e.message });
+    }
+  }
+
+  /**
    * Obtém padrões comuns
    * 
    * @returns {Array<Object>} Padrões comuns
@@ -232,32 +336,35 @@ class ForensicAnalyzer extends BaseSystem {
         id: 'null-reference',
         name: 'Null Reference Error',
         messagePattern: 'cannot read.*of null|cannot read.*of undefined',
-        solution: 'Adicionar verificação de null/undefined antes de usar variável'
+        solution: 'Adicionar verificação de null/undefined antes de usar variável',
+        source: 'builtin'
       },
       {
         id: 'import-not-found',
         name: 'Import Not Found',
         messagePattern: 'cannot find module|cannot resolve',
-        solution: 'Verificar se módulo está instalado e caminho está correto'
+        solution: 'Verificar se módulo está instalado e caminho está correto',
+        source: 'builtin'
       },
       {
         id: 'syntax-error',
         name: 'Syntax Error',
         messagePattern: 'unexpected token|syntax error',
-        solution: 'Verificar sintaxe do código, especialmente parênteses, chaves e vírgulas'
+        solution: 'Verificar sintaxe do código, especialmente parênteses, chaves e vírgulas',
+        source: 'builtin'
       }
     ];
   }
 
   /**
-   * Coleta evidências para análise
+   * Coleta evidências para análise usando EvidenceChainManager quando disponível
    * 
    * @param {Object} error - Erro
    * @param {Object} context - Contexto
    * @returns {Promise<Object>} Evidências coletadas
    */
   async collectEvidence(error, context) {
-    const evidence = {
+    const rawEvidence = {
       errorMessage: error.message,
       errorType: error.type,
       errorStack: error.stack,
@@ -272,15 +379,57 @@ class ForensicAnalyzer extends BaseSystem {
       relatedErrors: context.relatedErrors || []
     };
 
+    // Se EvidenceChainManager disponível, criar cadeia de evidência
+    if (this.useEvidenceChain && this.evidenceChainManager) {
+      try {
+        const chainId = `evidence-chain-${Date.now()}`;
+        const chain = await this.evidenceChainManager.execute({
+          action: 'create',
+          observation: {
+            type: 'error',
+            target: error.file || 'unknown',
+            description: error.message,
+            metadata: {
+              errorType: error.type,
+              severity: error.severity || 'medium'
+            }
+          },
+          chainId
+        });
+
+        // Adicionar evidência bruta à cadeia
+        await this.evidenceChainManager.execute({
+          action: 'addRawEvidence',
+          chainId,
+          rawEvidence
+        });
+
+        // Normalizar evidência
+        const normalized = await this.evidenceChainManager.execute({
+          action: 'normalize',
+          chainId
+        });
+
+        return {
+          ...rawEvidence,
+          chainId,
+          normalizedEvidence: normalized,
+          source: 'evidence_chain'
+        };
+      } catch (e) {
+        this.logger?.warn('Erro ao criar cadeia de evidência, usando evidência simples', { error: e.message });
+      }
+    }
+
     // Cachear evidências
     const evidenceId = `evidence-${Date.now()}`;
-    this.evidenceCache.set(evidenceId, evidence);
+    this.evidenceCache.set(evidenceId, rawEvidence);
 
-    return evidence;
+    return rawEvidence;
   }
 
   /**
-   * Determina causa raiz
+   * Determina causa raiz usando AbsoluteCertaintyAnalyzer quando disponível
    * 
    * @param {Object} error - Erro
    * @param {Object} classification - Classificação
@@ -290,6 +439,33 @@ class ForensicAnalyzer extends BaseSystem {
    * @returns {Promise<Object>} Causa raiz identificada
    */
   async determineRootCause(error, classification, pattern, evidence, context) {
+    // Se AbsoluteCertaintyAnalyzer disponível e temos código, usar análise com certeza absoluta
+    if (this.useAbsoluteCertainty && this.absoluteCertaintyAnalyzer && evidence.code) {
+      try {
+        const certaintyAnalysis = await this.absoluteCertaintyAnalyzer.execute({
+          errorReport: {
+            type: error.type || classification.category,
+            methodName: error.methodName || null,
+            message: error.message
+          },
+          sourceCode: evidence.code
+        });
+
+        if (certaintyAnalysis.isError && certaintyAnalysis.confidence >= 0.8) {
+          return {
+            identified: true,
+            cause: certaintyAnalysis.cause || classification.category,
+            explanation: certaintyAnalysis.evidence || this.explainRootCause(classification, evidence),
+            confidence: certaintyAnalysis.confidence,
+            source: 'absolute_certainty',
+            falsePositiveRisk: certaintyAnalysis.falsePositiveRisk || 0.0
+          };
+        }
+      } catch (e) {
+        this.logger?.warn('Erro ao usar AbsoluteCertaintyAnalyzer, usando análise padrão', { error: e.message });
+      }
+    }
+
     // Se há padrão conhecido, usar solução do padrão
     if (pattern && pattern.solution) {
       return {
@@ -427,7 +603,7 @@ class ForensicAnalyzer extends BaseSystem {
    * @returns {Array<string>} Dependências
    */
   onGetDependencies() {
-    return ['logger', 'config'];
+    return ['logger', 'config', '?AbsoluteCertaintyAnalyzer', '?EvidenceChainManager'];
   }
 }
 
@@ -439,8 +615,10 @@ export default ForensicAnalyzer;
  * @param {Object} config - Configuração
  * @param {Object} logger - Logger
  * @param {Object} errorHandler - Error Handler
+ * @param {Object} absoluteCertaintyAnalyzer - Absolute Certainty Analyzer (opcional)
+ * @param {Object} evidenceChainManager - Evidence Chain Manager (opcional)
  * @returns {ForensicAnalyzer} Instância do ForensicAnalyzer
  */
-export function createForensicAnalyzer(config = null, logger = null, errorHandler = null) {
-  return new ForensicAnalyzer(config, logger, errorHandler);
+export function createForensicAnalyzer(config = null, logger = null, errorHandler = null, absoluteCertaintyAnalyzer = null, evidenceChainManager = null) {
+  return new ForensicAnalyzer(config, logger, errorHandler, absoluteCertaintyAnalyzer, evidenceChainManager);
 }

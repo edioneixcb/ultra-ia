@@ -24,6 +24,8 @@ import { getLogger } from '../utils/Logger.js';
 import { getErrorHandler } from '../utils/ErrorHandler.js';
 import { getKnowledgeBase } from './DynamicKnowledgeBase.js';
 import { getTimeoutManager } from '../utils/TimeoutManager.js';
+import GoldExampleSearcher from '../knowledge/GoldExampleSearcher.js';
+import AntiPatternManager from '../knowledge/AntiPatternManager.js';
 
 class HallucinationPreventionGenerator {
   constructor(config = null, logger = null, errorHandler = null, knowledgeBase = null) {
@@ -58,6 +60,10 @@ class HallucinationPreventionGenerator {
     this.errorHandler = errorHandler;
     this.knowledgeBase = knowledgeBase;
     this.timeoutManager = getTimeoutManager(config, logger);
+
+    // Inicializar searchers para RAG
+    this.goldExampleSearcher = new GoldExampleSearcher(config, logger);
+    this.antiPatternManager = new AntiPatternManager(config, logger);
 
     // Configurações do Ollama
     this.ollamaUrl = config.services?.ollama?.url || 'http://localhost:11434';
@@ -319,13 +325,9 @@ class HallucinationPreventionGenerator {
    */
   async getGoldExamples(prompt, language) {
     try {
-      // Buscar na knowledge base
-      const stats = this.knowledgeBase.getStats();
-      if (stats.goldExamples === 0) {
-        return [];
+      if (this.config.rag?.useGoldExamples !== false) {
+        return await this.goldExampleSearcher.search(prompt, language);
       }
-
-      // Por enquanto, retornar vazio (será implementado quando KB tiver busca de exemplos)
       return [];
     } catch (error) {
       this.logger?.warn('Erro ao buscar exemplos positivos', { error: error.message });
@@ -341,12 +343,9 @@ class HallucinationPreventionGenerator {
    */
   async getAntiPatterns(prompt, language) {
     try {
-      const stats = this.knowledgeBase.getStats();
-      if (stats.antiPatterns === 0) {
-        return [];
+      if (this.config.rag?.useAntiPatterns !== false) {
+        return await this.antiPatternManager.search(prompt, language);
       }
-
-      // Por enquanto, retornar vazio (será implementado quando KB tiver busca de anti-padrões)
       return [];
     } catch (error) {
       this.logger?.warn('Erro ao buscar anti-padrões', { error: error.message });

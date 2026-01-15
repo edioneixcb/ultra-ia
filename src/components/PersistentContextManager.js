@@ -194,12 +194,27 @@ class PersistentContextManager {
    * @returns {Array<object>} Lista de mensagens
    */
   getContext(sessionId, limit = null) {
+    // Se limit especificado, buscar diretamente as últimas N mensagens para garantir ordem correta
+    if (limit) {
+      const limited = this.db.prepare(`
+        SELECT role, content, timestamp, importance, compressed
+        FROM context_messages
+        WHERE session_id = ?
+        ORDER BY id DESC
+        LIMIT ?
+      `).all(sessionId, limit).reverse(); // reverse para manter ordem cronológica
+      return limited.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        importance: msg.importance,
+        compressed: msg.compressed === 1
+      }));
+    }
+
     // Verificar cache
     if (this.contextCache.has(sessionId)) {
       const cached = this.contextCache.get(sessionId);
-      if (limit) {
-        return cached.slice(-limit);
-      }
       return cached;
     }
 
@@ -208,7 +223,7 @@ class PersistentContextManager {
       SELECT role, content, timestamp, importance, compressed
       FROM context_messages
       WHERE session_id = ?
-      ORDER BY timestamp ASC
+      ORDER BY id ASC
     `;
 
     const params = [sessionId];
@@ -230,7 +245,7 @@ class PersistentContextManager {
     // Armazenar em cache
     this.contextCache.set(sessionId, context);
 
-    return limit ? context.slice(-limit) : context;
+    return context;
   }
 
   /**

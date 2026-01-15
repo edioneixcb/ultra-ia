@@ -7,6 +7,7 @@
  * - Detecção de Padrões em Tempo Real
  * - Validação Inline Durante Geração
  * - Previsão de Problemas Futuros
+ * - Integração com Baseline de Ambiente
  * 
  * Métricas de Sucesso:
  * - 100% dos padrões problemáticos detectados em tempo real
@@ -17,11 +18,27 @@
 import BaseSystem from '../../core/BaseSystem.js';
 
 class ProactiveAnticipationSystem extends BaseSystem {
+  /**
+   * Construtor com injeção de dependências
+   * 
+   * @param {Object} config - Configuração
+   * @param {Object} logger - Logger
+   * @param {Object} errorHandler - Error Handler
+   * @param {Object} [baselineManager=null] - Gerenciador de Baseline opcional
+   */
+  constructor(config = null, logger = null, errorHandler = null, baselineManager = null) {
+    super(config, logger, errorHandler);
+    this.baselineManager = baselineManager;
+    this.useBaselineIntegration = config?.features?.useBaselineIntegration !== false && baselineManager !== null;
+  }
+
   async onInitialize() {
     this.anticipations = new Map();
     this.historicalErrors = [];
     this.problematicPatterns = new Map();
-    this.logger?.info('ProactiveAnticipationSystem inicializado');
+    this.logger?.info('ProactiveAnticipationSystem inicializado', {
+      useBaselineIntegration: this.useBaselineIntegration
+    });
   }
 
   /**
@@ -39,7 +56,32 @@ class ProactiveAnticipationSystem extends BaseSystem {
 
     this.logger?.info('Antecipando problemas durante desenvolvimento');
 
+    // Se integração com baseline habilitada, analisar mudanças de ambiente
+    let environmentRisks = [];
+    if (this.useBaselineIntegration && this.baselineManager) {
+      try {
+        const baseline = await this.baselineManager.execute({ systemName: 'ProactiveAnticipation' });
+        environmentRisks = await this.analyzeEnvironmentRisks(baseline, code);
+      } catch (error) {
+        this.logger?.warn('Falha ao obter baseline para antecipação', { error });
+      }
+    }
+
     const result = await this.anticipateProblemsDuringDevelopment(code, codeContext || {});
+
+    // Combinar riscos de ambiente
+    if (environmentRisks.length > 0) {
+      result.environmentRisks = environmentRisks;
+      // Adicionar sugestões baseadas em ambiente
+      for (const risk of environmentRisks) {
+        result.prevention.push({
+          type: 'environment_based',
+          priority: 'high',
+          issue: risk.type,
+          suggestion: risk.suggestion
+        });
+      }
+    }
 
     // Armazenar antecipação
     const anticipationId = `anticipation-${Date.now()}`;
@@ -51,6 +93,38 @@ class ProactiveAnticipationSystem extends BaseSystem {
     });
 
     return result;
+  }
+
+  /**
+   * Analisa riscos de ambiente
+   * 
+   * @param {Object} baseline - Baseline do ambiente
+   * @param {string} code - Código
+   * @returns {Promise<Array>} Riscos de ambiente
+   */
+  async analyzeEnvironmentRisks(baseline, code) {
+    const risks = [];
+    
+    // Verificar compatibilidade de Node.js se código usa features recentes
+    if (baseline.environment?.runtime?.version) {
+      const nodeVersion = baseline.environment.runtime.version;
+      
+      // Exemplo: Top-level await requer Node 14.8+
+      if (code.includes('await ') && !code.includes('async ') && !code.match(/async\s+function/)) {
+        // Detecção simplificada de top-level await (melhor seria com AST)
+        // Assumindo que top level await pode ser um risco se versão antiga
+        const majorVersion = parseInt(nodeVersion.replace('v', '').split('.')[0]);
+        if (majorVersion < 14) {
+          risks.push({
+            type: 'incompatible_node_version',
+            severity: 'high',
+            suggestion: `Top-level await requer Node.js 14.8+, atual é ${nodeVersion}`
+          });
+        }
+      }
+    }
+
+    return risks;
   }
 
   /**
@@ -408,8 +482,9 @@ export default ProactiveAnticipationSystem;
  * @param {Object} config - Configuração
  * @param {Object} logger - Logger
  * @param {Object} errorHandler - Error Handler
+ * @param {Object} [baselineManager=null] - Baseline Manager opcional
  * @returns {ProactiveAnticipationSystem} Instância do ProactiveAnticipationSystem
  */
-export function createProactiveAnticipationSystem(config = null, logger = null, errorHandler = null) {
-  return new ProactiveAnticipationSystem(config, logger, errorHandler);
+export function createProactiveAnticipationSystem(config = null, logger = null, errorHandler = null, baselineManager = null) {
+  return new ProactiveAnticipationSystem(config, logger, errorHandler, baselineManager);
 }

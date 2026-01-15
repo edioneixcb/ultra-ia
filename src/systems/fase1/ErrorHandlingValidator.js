@@ -19,7 +19,10 @@ import BaseSystem from '../../core/BaseSystem.js';
 class ErrorHandlingValidator extends BaseSystem {
   async onInitialize() {
     this.validations = new Map();
-    this.logger?.info('ErrorHandlingValidator inicializado');
+    this.useGlobalErrorHandler = this.config?.features?.useGlobalErrorHandler === true;
+    this.logger?.info('ErrorHandlingValidator inicializado', {
+      useGlobalErrorHandler: this.useGlobalErrorHandler
+    });
   }
 
   /**
@@ -200,6 +203,11 @@ class ErrorHandlingValidator extends BaseSystem {
    * @returns {string} Exemplo de correção
    */
   getExampleFix(issueType) {
+    // Se a feature flag de integração com ErrorHandler global estiver ativa, sugerir uso dele
+    const errorHandlingCode = this.useGlobalErrorHandler && this.errorHandler
+      ? `this.errorHandler?.handleError(error, { context: 'Operation' });\n  throw error;`
+      : `this.logger?.error('Erro capturado', { error });\n  throw error;`;
+
     const examples = {
       empty_catch: `
 // Antes:
@@ -207,8 +215,7 @@ catch (e) {}
 
 // Depois:
 catch (error) {
-  this.logger?.error('Erro capturado', { error });
-  throw error;
+  ${errorHandlingCode}
 }`,
       console_usage: `
 // Antes:
@@ -224,8 +231,7 @@ const result = await fetchData();
 try {
   const result = await fetchData();
 } catch (error) {
-  this.logger?.error('Erro ao buscar dados', { error });
-  throw error;
+  ${errorHandlingCode}
 }`
     };
 
@@ -283,7 +289,7 @@ try {
    * @returns {Array<string>} Dependências
    */
   onGetDependencies() {
-    return ['logger', 'config'];
+    return ['logger', 'config', 'errorHandler'];
   }
 }
 

@@ -157,16 +157,16 @@ describe('PersistentContextManager', () => {
       contextManager.addMessage(sessionId, 'assistant', 'Hi there', 7);
     });
 
-    it('deve retornar contexto formatado', () => {
-      const formatted = contextManager.getFormattedContext('test-session-7');
+    it('deve retornar contexto formatado', async () => {
+      const formatted = await contextManager.getFormattedContext('test-session-7');
       
       expect(formatted.length).toBeGreaterThan(0);
       expect(formatted[0]).toHaveProperty('role');
       expect(formatted[0]).toHaveProperty('content');
     });
 
-    it('deve limitar por tokens', () => {
-      const formatted = contextManager.getFormattedContext('test-session-7', 100);
+    it('deve limitar por tokens', async () => {
+      const formatted = await contextManager.getFormattedContext('test-session-7', 100);
       
       // Deve retornar contexto limitado
       expect(formatted.length).toBeGreaterThan(0);

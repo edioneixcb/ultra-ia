@@ -16,12 +16,39 @@
  */
 
 import BaseSystem from '../../core/BaseSystem.js';
+import { getComponentRegistry } from '../../core/index.js';
 
 class TestValidator extends BaseSystem {
+  constructor(config = null, logger = null, errorHandler = null, testExpectationValidator = null) {
+    super(config, logger, errorHandler);
+    this.testExpectationValidator = testExpectationValidator;
+    // Lazy loading para evitar dependência circular
+    this.useTestExpectationValidator = config?.features?.useTestExpectationValidator !== false;
+    this.autoUpdate = config?.fase3?.testValidator?.autoUpdate !== false;
+  }
+
   async onInitialize() {
     this.validations = new Map();
     this.updates = new Map();
-    this.logger?.info('TestValidator inicializado');
+    
+    // Obter TestExpectationValidator via lazy loading se não fornecido
+    if (this.useTestExpectationValidator && !this.testExpectationValidator) {
+      try {
+        const registry = getComponentRegistry();
+        this.testExpectationValidator = registry.get('TestExpectationValidator');
+        if (this.testExpectationValidator) {
+          this.logger?.debug('TestExpectationValidator obtido via lazy loading');
+        }
+      } catch (e) {
+        this.logger?.warn('Erro ao obter TestExpectationValidator, continuando sem integração', { error: e.message });
+        this.useTestExpectationValidator = false;
+      }
+    }
+
+    this.logger?.info('TestValidator inicializado', {
+      useTestExpectationValidator: this.useTestExpectationValidator,
+      autoUpdate: this.autoUpdate
+    });
   }
 
   /**
@@ -159,7 +186,7 @@ class TestValidator extends BaseSystem {
   }
 
   /**
-   * Valida expectativas do teste
+   * Valida expectativas do teste usando TestExpectationValidator quando disponível
    * 
    * @param {Object} test - Teste
    * @param {Object} implementation - Implementação
@@ -173,7 +200,42 @@ class TestValidator extends BaseSystem {
       return { valid: false, errors };
     }
 
-    // Verificar se expectativas são válidas
+    // Se TestExpectationValidator disponível, usar validação avançada
+    if (this.useTestExpectationValidator && this.testExpectationValidator) {
+      try {
+        const expectationValidation = await this.testExpectationValidator.execute({
+          action: 'validateExpectations',
+          test,
+          implementation
+        });
+
+        if (!expectationValidation.valid) {
+          errors.push(...expectationValidation.mismatches.map(m => m.description));
+          
+          // Se há expectativas corretas sugeridas, incluir
+          if (expectationValidation.correctExpectations) {
+            return {
+              valid: false,
+              errors,
+              suggestions: expectationValidation.suggestions,
+              correctExpectations: expectationValidation.correctExpectations,
+              source: 'test_expectation_validator'
+            };
+          }
+        } else {
+          return {
+            valid: true,
+            errors: [],
+            source: 'test_expectation_validator',
+            threeEValidation: expectationValidation.threeEValidation
+          };
+        }
+      } catch (e) {
+        this.logger?.warn('Erro ao usar TestExpectationValidator, usando validação básica', { error: e.message });
+      }
+    }
+
+    // Validação básica (fallback)
     if (test.expectations.returnValue === undefined && 
         test.expectations.output === undefined &&
         !test.expectations.shouldThrow) {
@@ -182,7 +244,8 @@ class TestValidator extends BaseSystem {
 
     return {
       valid: errors.length === 0,
-      errors
+      errors,
+      source: 'basic'
     };
   }
 
@@ -219,7 +282,7 @@ class TestValidator extends BaseSystem {
   }
 
   /**
-   * Atualiza teste para nova implementação
+   * Atualiza teste para nova implementação usando TestExpectationValidator quando disponível
    * 
    * @param {Object} test - Teste a atualizar
    * @param {Object} newImplementation - Nova implementação
@@ -227,6 +290,61 @@ class TestValidator extends BaseSystem {
    * @returns {Promise<Object>} Teste atualizado
    */
   async updateTest(test, newImplementation, validationId = null) {
+    // Se autoUpdate habilitado e TestExpectationValidator disponível, usar atualização automática
+    if (this.autoUpdate && this.useTestExpectationValidator && this.testExpectationValidator) {
+      try {
+        // Validar expectativas antes de atualizar
+        const expectationValidation = await this.testExpectationValidator.execute({
+          action: 'validateExpectations',
+          test,
+          implementation: newImplementation
+        });
+
+        const updatedTest = { ...test };
+
+        // Se há mismatches, atualizar expectativas automaticamente
+        if (!expectationValidation.valid && expectationValidation.correctExpectations) {
+          updatedTest.expectations = expectationValidation.correctExpectations;
+          updatedTest.updatedAt = new Date().toISOString();
+          updatedTest.updateReason = 'Expectativas atualizadas automaticamente baseadas em comportamento real';
+
+          this.logger?.info('Teste atualizado automaticamente', {
+            testId: test.id || test.name,
+            mismatchesFixed: expectationValidation.mismatches.length
+          });
+        }
+
+        // Validar que teste atualizado ainda funciona
+        const stillValid = await this.ensureBehaviorValidation(updatedTest, newImplementation);
+
+        const result = {
+          test: updatedTest,
+          updated: !expectationValidation.valid,
+          stillValid,
+          behaviorValidation: {
+            matches: expectationValidation.valid,
+            suggestedExpectations: expectationValidation.correctExpectations
+          },
+          source: 'auto_update',
+          expectationValidation
+        };
+
+        // Armazenar atualização
+        const id = validationId || `update-${Date.now()}`;
+        this.updates.set(id, {
+          ...result,
+          originalTest: test,
+          newImplementation,
+          updatedAt: new Date().toISOString()
+        });
+
+        return result;
+      } catch (e) {
+        this.logger?.warn('Erro ao atualizar teste automaticamente, usando método manual', { error: e.message });
+      }
+    }
+
+    // Método manual (fallback ou quando autoUpdate desabilitado)
     // Validar comportamento da nova implementação
     const behaviorValidation = await this.validateBehavior(test, newImplementation);
 
@@ -244,7 +362,8 @@ class TestValidator extends BaseSystem {
       test: updatedTest,
       updated: !behaviorValidation.matches,
       stillValid,
-      behaviorValidation
+      behaviorValidation,
+      source: 'manual'
     };
 
     // Armazenar atualização
@@ -433,7 +552,7 @@ class TestValidator extends BaseSystem {
    * @returns {Array<string>} Dependências
    */
   onGetDependencies() {
-    return ['logger', 'config'];
+    return ['logger', 'config', '?TestExpectationValidator'];
   }
 }
 
@@ -445,8 +564,9 @@ export default TestValidator;
  * @param {Object} config - Configuração
  * @param {Object} logger - Logger
  * @param {Object} errorHandler - Error Handler
+ * @param {Object} testExpectationValidator - Test Expectation Validator (opcional)
  * @returns {TestValidator} Instância do TestValidator
  */
-export function createTestValidator(config = null, logger = null, errorHandler = null) {
-  return new TestValidator(config, logger, errorHandler);
+export function createTestValidator(config = null, logger = null, errorHandler = null, testExpectationValidator = null) {
+  return new TestValidator(config, logger, errorHandler, testExpectationValidator);
 }

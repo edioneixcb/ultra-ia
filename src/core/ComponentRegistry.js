@@ -131,12 +131,21 @@ class ComponentRegistry {
     // Resolver dependências
     const deps = this.dependencies.get(name) || [];
     const resolvedDeps = deps.map(dep => {
+      const isOptional = dep.startsWith('?');
+      const depName = isOptional ? dep.substring(1) : dep;
+
       // Verificar se está no contexto primeiro
-      if (context[dep]) {
-        return context[dep];
+      if (context[depName]) {
+        return context[depName];
       }
+
+      // Se for opcional e não existir, retornar null
+      if (isOptional && !this.components.has(depName)) {
+        return null;
+      }
+
       // Resolver recursivamente
-      return this.get(dep, context);
+      return this.get(depName, context);
     });
 
     // Obter factory e criar instância
@@ -231,7 +240,9 @@ class ComponentRegistry {
    * @private
    */
   validateDependencies(name, dependencies) {
-    const missing = dependencies.filter(dep => !this.components.has(dep));
+    const mandatoryDeps = dependencies.filter(dep => !dep.startsWith('?'));
+    const missing = mandatoryDeps.filter(dep => !this.components.has(dep));
+
     if (missing.length > 0) {
       const error = new Error(
         `Dependências faltando para '${name}': ${missing.join(', ')}. ` +

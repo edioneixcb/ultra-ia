@@ -355,7 +355,7 @@ class DockerSandbox {
    */
   async cleanup(container, filePath) {
     try {
-      // Remover container
+      const containerName = container?.Name || container?.id;
       if (container) {
         try {
           await container.stop({ t: 0 });
@@ -363,11 +363,17 @@ class DockerSandbox {
           // Container pode já estar parado
         }
         try {
-          await container.remove();
+          await container.remove({ force: true });
         } catch (error) {
           this.logger?.warn('Erro ao remover container', { error: error.message });
         }
-        this.activeContainers.delete(container.id);
+        // Corrigir: deletar por containerName, não container.id
+        for (const [name, c] of this.activeContainers) {
+          if (c.id === container.id) {
+            this.activeContainers.delete(name);
+            break;
+          }
+        }
       }
 
       // Remover arquivo temporário
@@ -387,72 +393,15 @@ class DockerSandbox {
    * @returns {Promise<object>} Resultado
    */
   async executeFallback(code, language, options) {
-    this.logger?.warn('Usando fallback (sem Docker)', { language });
+    this.logger?.warn('Fallback de execução desabilitado por segurança', { language });
     
-    // Executar código diretamente usando spawn (método original)
-    const { spawn } = await import('child_process');
-    const { writeFileSync, unlinkSync } = await import('fs');
-    const { join } = await import('path');
-    
-    const extension = this.getFileExtension(language);
-    const executionId = `fallback-${Date.now()}`;
-    const fileName = `${executionId}.${extension}`;
-    const filePath = join(this.tempDir, fileName);
-    
-    writeFileSync(filePath, code, 'utf-8');
-    
-    let command, args;
-    if (language === 'python' || language === 'py') {
-      command = 'python3';
-      args = [filePath];
-    } else if (language === 'javascript' || language === 'js') {
-      command = 'node';
-      args = [filePath];
-    } else {
-      throw new Error(`Linguagem não suportada: ${language}`);
-    }
-    
-    return new Promise((resolve, reject) => {
-      const process = spawn(command, args, {
-        cwd: this.tempDir,
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
-      
-      let stdout = '';
-      let stderr = '';
-      let timeoutId;
-      
-      if (options.timeout > 0) {
-        timeoutId = setTimeout(() => {
-          process.kill('SIGTERM');
-          reject(new Error(`Timeout após ${options.timeout}ms`));
-        }, options.timeout);
-      }
-      
-      process.stdout.on('data', (data) => { stdout += data.toString(); });
-      process.stderr.on('data', (data) => { stderr += data.toString(); });
-      
-      process.on('close', (code) => {
-        if (timeoutId) clearTimeout(timeoutId);
-        try {
-          unlinkSync(filePath);
-        } catch (e) {}
-        resolve({
-          success: code === 0,
-          exitCode: code,
-          stdout: stdout.trim(),
-          stderr: stderr.trim()
-        });
-      });
-      
-      process.on('error', (error) => {
-        if (timeoutId) clearTimeout(timeoutId);
-        try {
-          unlinkSync(filePath);
-        } catch (e) {}
-        reject(error);
-      });
-    });
+    return {
+      success: false,
+      exitCode: -1,
+      stdout: '',
+      stderr: 'Execução requer Docker. Fallback desabilitado por segurança.',
+      errors: ['Docker não disponível e fallback desabilitado']
+    };
   }
 
   /**
@@ -496,6 +445,117 @@ class DockerSandbox {
     );
     await Promise.allSettled(cleanupPromises);
     this.activeContainers.clear();
+  }
+
+  /**
+   * Remove containers órfãos do ultra-sandbox
+   * @returns {Promise<object>} { removed, errors }
+   */
+  async cleanupOrphanedContainers() {
+    if (!this.docker) {
+      return { removed: [], errors: [] };
+    }
+
+    const removed = [];
+    const errors = [];
+
+    try {
+      const containers = await this.docker.listContainers({
+        all: true,
+        filters: { name: ['ultra-sandbox-'] }
+      });
+
+      for (const containerInfo of containers) {
+        try {
+          const container = this.docker.getContainer(containerInfo.Id);
+          
+          // Verificar se container está rodando há mais de 5 minutos
+          const createdAt = new Date(containerInfo.Created * 1000);
+          const ageMinutes = (Date.now() - createdAt.getTime()) / 60000;
+          
+          if (ageMinutes > 5) {
+            this.logger?.warn('Removendo container órfão', {
+              containerId: containerInfo.Id.substring(0, 12),
+              name: containerInfo.Names[0],
+              ageMinutes: Math.round(ageMinutes)
+            });
+
+            // Forçar remoção
+            if (containerInfo.State === 'running') {
+              await container.stop({ t: 5 });
+            }
+            await container.remove({ force: true });
+            removed.push(containerInfo.Id.substring(0, 12));
+          }
+        } catch (error) {
+          errors.push({ containerId: containerInfo.Id, error: error.message });
+        }
+      }
+    } catch (error) {
+      errors.push({ error: error.message });
+    }
+
+    return { removed, errors };
+  }
+
+  /**
+   * Obtém estatísticas de recursos dos containers ativos
+   * @returns {Promise<Array>} Lista de estatísticas
+   */
+  async getResourceStats() {
+    if (!this.docker) {
+      return [];
+    }
+
+    const stats = [];
+
+    try {
+      const containers = await this.docker.listContainers({
+        filters: { name: ['ultra-sandbox-'] }
+      });
+
+      for (const containerInfo of containers) {
+        try {
+          const container = this.docker.getContainer(containerInfo.Id);
+          const containerStats = await container.stats({ stream: false });
+          
+          stats.push({
+            containerId: containerInfo.Id.substring(0, 12),
+            name: containerInfo.Names[0],
+            cpuPercent: this.calculateCpuPercent(containerStats),
+            memoryUsage: containerStats.memory_stats?.usage || 0,
+            memoryLimit: containerStats.memory_stats?.limit || 0,
+            state: containerInfo.State
+          });
+        } catch (error) {
+          // Container pode ter sido removido
+        }
+      }
+    } catch (error) {
+      this.logger?.warn('Erro ao obter estatísticas', { error: error.message });
+    }
+
+    return stats;
+  }
+
+  /**
+   * Calcula uso de CPU em percentual
+   */
+  calculateCpuPercent(stats) {
+    if (!stats.cpu_stats || !stats.precpu_stats) {
+      return 0;
+    }
+
+    const cpuDelta = stats.cpu_stats.cpu_usage.total_usage - 
+                     stats.precpu_stats.cpu_usage.total_usage;
+    const systemDelta = stats.cpu_stats.system_cpu_usage - 
+                        stats.precpu_stats.system_cpu_usage;
+
+    if (systemDelta > 0) {
+      const cpuPercent = (cpuDelta / systemDelta) * 100;
+      return Math.round(cpuPercent * 100) / 100;
+    }
+    return 0;
   }
 }
 

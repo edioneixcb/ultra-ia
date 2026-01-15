@@ -8,6 +8,7 @@
  * - Detecção de Python (PATH, venv, conda, pyenv)
  * - Detecção de Docker
  * - Detecção de outras ferramentas
+ * - Integração com BaselineManager (opcional)
  * 
  * Métricas de Sucesso:
  * - 100% dos ambientes detectados corretamente
@@ -21,9 +22,25 @@ import { existsSync } from 'fs';
 import { join, dirname } from 'path';
 
 class EnvironmentDetector extends BaseSystem {
+  /**
+   * Construtor com injeção de dependências
+   * 
+   * @param {Object} config - Configuração
+   * @param {Object} logger - Logger
+   * @param {Object} errorHandler - Error Handler
+   * @param {Object} [baselineManager=null] - Baseline Manager opcional
+   */
+  constructor(config = null, logger = null, errorHandler = null, baselineManager = null) {
+    super(config, logger, errorHandler);
+    this.baselineManager = baselineManager;
+    this.useBaselineDetection = config?.features?.useBaselineDetection !== false && baselineManager !== null;
+  }
+
   async onInitialize() {
     this.detections = new Map();
-    this.logger?.info('EnvironmentDetector inicializado');
+    this.logger?.info('EnvironmentDetector inicializado', {
+      useBaselineDetection: this.useBaselineDetection
+    });
   }
 
   /**
@@ -35,12 +52,33 @@ class EnvironmentDetector extends BaseSystem {
   async onExecute(context) {
     this.logger?.info('Detectando ambientes');
 
+    // Se integração com baseline habilitada, usar
+    if (this.useBaselineDetection && this.baselineManager) {
+      try {
+        const baseline = await this.baselineManager.execute({ systemName: 'EnvironmentDetector' });
+        const result = this.mapBaselineToDetections(baseline);
+        
+        // Armazenar detecção
+        const detectionId = `detection-${Date.now()}`;
+        this.detections.set(detectionId, {
+          ...result,
+          source: 'baseline',
+          detectedAt: new Date().toISOString()
+        });
+        
+        return result;
+      } catch (error) {
+        this.logger?.warn('Falha na detecção via baseline, usando fallback', { error });
+      }
+    }
+
     const result = await this.detectAll();
 
     // Armazenar detecção
     const detectionId = `detection-${Date.now()}`;
     this.detections.set(detectionId, {
       ...result,
+      source: 'local',
       detectedAt: new Date().toISOString()
     });
 
@@ -48,7 +86,34 @@ class EnvironmentDetector extends BaseSystem {
   }
 
   /**
-   * Detecta todos os ambientes
+   * Mapeia baseline para formato de detecção
+   * 
+   * @param {Object} baseline - Baseline do ambiente
+   * @returns {Object} Detecções mapeadas
+   */
+  mapBaselineToDetections(baseline) {
+    const tools = {};
+    if (baseline.dependencies) {
+      if (baseline.dependencies.git) tools.git = { found: true, version: baseline.dependencies.git };
+      if (baseline.dependencies.npm) tools.npm = { found: true, version: baseline.dependencies.npm };
+    }
+
+    return {
+      nodejs: {
+        found: true,
+        version: baseline.environment?.runtime?.version || process.version,
+        method: 'baseline'
+      },
+      python: { found: false }, // Baseline atual não detecta python explicitamente
+      docker: baseline.dependencies?.docker === 'running' 
+        ? { found: true, version: 'running', method: 'baseline' } 
+        : { found: false },
+      tools
+    };
+  }
+
+  /**
+   * Detecta todos os ambientes (Fallback)
    * 
    * @returns {Promise<Object>} Detecções
    */
@@ -239,8 +304,9 @@ export default EnvironmentDetector;
  * @param {Object} config - Configuração
  * @param {Object} logger - Logger
  * @param {Object} errorHandler - Error Handler
+ * @param {Object} [baselineManager=null] - Baseline Manager opcional
  * @returns {EnvironmentDetector} Instância do EnvironmentDetector
  */
-export function createEnvironmentDetector(config = null, logger = null, errorHandler = null) {
-  return new EnvironmentDetector(config, logger, errorHandler);
+export function createEnvironmentDetector(config = null, logger = null, errorHandler = null, baselineManager = null) {
+  return new EnvironmentDetector(config, logger, errorHandler, baselineManager);
 }

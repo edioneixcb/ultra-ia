@@ -1,273 +1,182 @@
 /**
- * AntiSkipMechanism - Sistema Anti-Skip Mechanism
+ * AntiSkipMechanism - Sistema de Prevenção de Pulo de Etapas
  * 
- * Previne pulo de checks obrigatórios durante execução.
+ * Garante que checks e checkpoints obrigatórios sejam executados.
+ * Mantém estado em memória para rastrear progresso da sessão.
  * 
  * Funcionalidades:
- * - Detecção de tentativa de pular check
- * - Bloqueio automático de progressão
- * - Registro de tentativas de skip
- * - Validação de execução de checks obrigatórios
- * 
- * Métricas de Sucesso:
- * - 0% de checks obrigatórios pulados
- * - 100% de tentativas de skip registradas
- * - 100% de bloqueios automáticos funcionando
+ * - Registro de execução de checks
+ * - Validação de obrigatoriedade
+ * - Bloqueio fatal se check crítico for pulado
+ * - Relatório de skips tentados
  */
 
 import BaseSystem from '../../core/BaseSystem.js';
 
 class AntiSkipMechanism extends BaseSystem {
   async onInitialize() {
-    this.executedChecks = new Set();
-    this.requiredChecks = new Set();
+    this.executionLog = new Set(); // IDs de checks executados
+    this.executedChecks = this.executionLog; // alias para compatibilidade
     this.skipAttempts = [];
+    this.requiredChecks = new Map(); // checkId -> required flag
     this.logger?.info('AntiSkipMechanism inicializado');
   }
 
   /**
-   * Executa validação anti-skip
-   * 
-   * @param {Object} context - Contexto com checkId e required
-   * @returns {Promise<Object>} Resultado da validação
+   * Registra execução de um check
+   * @param {Object} context { checkId, status }
    */
   async onExecute(context) {
-    const { checkId, required, action } = context;
+    const { action, checkId, required = false } = context;
 
-    if (!checkId) {
-      throw new Error('checkId é obrigatório no contexto');
-    }
+    switch (action) {
+      case 'register':
+        // Registrar check e se é obrigatório
+        this.requiredChecks.set(checkId, required === true);
+        return { registered: true, required: required === true };
 
-    if (action === 'register') {
-      return await this.registerCheck(checkId, required);
-    } else if (action === 'validate') {
-      return await this.validateCheckExecution(checkId, required);
-    } else if (action === 'preventSkip') {
-      return await this.preventSkip(checkId);
-    } else if (action === 'markExecuted') {
-      return await this.markExecuted(checkId);
-    } else {
-      throw new Error(`Ação desconhecida: ${action}. Use: register, validate, preventSkip, markExecuted`);
+      case 'validate':
+        return this.validateCheckExecution(checkId, required === true);
+
+      case 'markExecuted':
+        this.executionLog.add(checkId);
+        return { marked: true };
+
+      case 'preventSkip':
+        return this.preventSkip(checkId);
+
+      default:
+        throw new Error(`Ação desconhecida: ${action}`);
     }
   }
 
   /**
-   * Registra check como obrigatório ou opcional
-   * 
-   * @param {string} checkId - ID do check
-   * @param {boolean} required - Se é obrigatório
-   * @returns {Promise<Object>} Resultado do registro
+   * Valida se check foi executado. Lança erro se obrigatório e ausente.
    */
-  async registerCheck(checkId, required = false) {
-    if (required) {
-      this.requiredChecks.add(checkId);
-      this.logger?.info(`Check obrigatório registrado: ${checkId}`);
-    }
+  validateCheckExecution(checkId, required) {
+    const executed = this.executionLog.has(checkId);
+    const isRequired = this.requiredChecks.has(checkId)
+      ? this.isRequired(checkId)
+      : (required === true);
 
-    return {
-      registered: true,
-      checkId,
-      required,
-      totalRequired: this.requiredChecks.size
-    };
-  }
-
-  /**
-   * Valida se check obrigatório foi executado
-   * 
-   * @param {string} checkId - ID do check
-   * @param {boolean} required - Se é obrigatório (opcional, usa registro se não fornecido)
-   * @returns {Promise<Object>} Resultado da validação
-   */
-  async validateCheckExecution(checkId, required = null) {
-    const isRequired = required !== null ? required : this.requiredChecks.has(checkId);
-    const wasExecuted = this.executedChecks.has(checkId);
-
-    if (isRequired && !wasExecuted) {
-      const error = new Error(`Check obrigatório ${checkId} não foi executado`);
-      this.logger?.error('Check obrigatório não executado', { checkId });
+    if (isRequired && !executed) {
+      this.logSkipAttempt(checkId);
+      // Erro fatal para checks obrigatórios
+      const error = new Error(`PARE IMEDIATAMENTE: Check obrigatório ${checkId} não foi executado.`);
+      this.logger?.error(error.message);
       throw error;
     }
 
     return {
-      valid: true,
-      checkId,
-      required: isRequired,
-      executed: wasExecuted
+      executed,
+      valid: !isRequired || executed
     };
   }
 
   /**
-   * Previne skip de check obrigatório
-   * 
-   * @param {string} checkId - ID do check
-   * @returns {Object} Resultado da prevenção
+   * Evita pulo de etapa verificando obrigatoriedade e execução
+   * @param {string} checkId
+   * @returns {object} { blocked, reason? }
    */
   preventSkip(checkId) {
-    const isRequired = this.requiredChecks.has(checkId);
-    const wasExecuted = this.executedChecks.has(checkId);
+    const required = this.requiredChecks.get(checkId) === true;
+    const executed = this.executionLog.has(checkId);
 
-    if (isRequired && !wasExecuted) {
-      // Registrar tentativa de skip
-      this.logSkipAttempt(checkId, 'Tentativa de pular check obrigatório');
-
+    if (required && !executed) {
+      this.logSkipAttempt(checkId);
       return {
         blocked: true,
-        reason: 'Check obrigatório não foi executado',
-        checkId,
-        required: true
+        reason: `Check obrigatório ${checkId} não executado`
       };
     }
 
-    return {
-      blocked: false,
-      checkId,
-      required: isRequired
-    };
+    return { blocked: false };
   }
 
   /**
-   * Marca check como executado
-   * 
-   * @param {string} checkId - ID do check
-   * @returns {Object} Resultado
+   * Registra tentativa de skip para auditoria
    */
-  markExecuted(checkId) {
-    this.executedChecks.add(checkId);
-    this.logger?.debug(`Check marcado como executado: ${checkId}`);
-
-    return {
-      marked: true,
-      checkId,
-      totalExecuted: this.executedChecks.size
-    };
-  }
-
-  /**
-   * Registra tentativa de skip
-   * 
-   * @param {string} checkId - ID do check
-   * @param {string} reason - Motivo
-   */
-  logSkipAttempt(checkId, reason) {
+  logSkipAttempt(checkId) {
     const attempt = {
       checkId,
-      reason,
       timestamp: new Date().toISOString(),
-      blocked: true
+      stack: new Error().stack
     };
-
     this.skipAttempts.push(attempt);
-    this.logger?.warn('Tentativa de skip detectada', attempt);
+    this.logger?.warn(`Tentativa de skip detectada: ${checkId}`);
+  }
+
+  /**
+   * Retorna relatório de integridade
+   */
+  getIntegrityReport() {
+    return {
+      totalExecuted: this.executionLog.size,
+      skipAttempts: this.skipAttempts.length,
+      cleanRun: this.skipAttempts.length === 0
+    };
+  }
+
+  /**
+   * Retorna estatísticas detalhadas
+   */
+  getStats() {
+    const requiredList = Array.from(this.requiredChecks.entries()).filter(([, req]) => req);
+    const requiredCount = requiredList.length;
+    const executedRequired = requiredList.filter(([id]) => this.executionLog.has(id)).length;
+
+    return {
+      totalRequired: requiredCount,
+      totalExecuted: executedRequired,
+      requiredNotExecuted: requiredCount - executedRequired,
+      complianceRate: requiredCount === 0 ? 100 : Math.round((executedRequired / requiredCount) * 100)
+    };
   }
 
   /**
    * Verifica se check foi executado
-   * 
-   * @param {string} checkId - ID do check
-   * @returns {boolean} Se foi executado
    */
   wasExecuted(checkId) {
-    return this.executedChecks.has(checkId);
+    return this.executionLog.has(checkId);
   }
 
   /**
    * Verifica se check é obrigatório
-   * 
-   * @param {string} checkId - ID do check
-   * @returns {boolean} Se é obrigatório
    */
   isRequired(checkId) {
-    return this.requiredChecks.has(checkId);
+    return this.requiredChecks.get(checkId) === true;
   }
 
   /**
-   * Obtém estatísticas
-   * 
-   * @returns {Object} Estatísticas
+   * Valida contexto de entrada
    */
-  getStats() {
-    const requiredNotExecuted = Array.from(this.requiredChecks).filter(
-      checkId => !this.executedChecks.has(checkId)
-    );
-
-    return {
-      totalRequired: this.requiredChecks.size,
-      totalExecuted: this.executedChecks.size,
-      requiredNotExecuted: requiredNotExecuted.length,
-      skipAttempts: this.skipAttempts.length,
-      complianceRate: this.requiredChecks.size > 0
-        ? (this.executedChecks.size / this.requiredChecks.size) * 100
-        : 100
-    };
-  }
-
-  /**
-   * Obtém tentativas de skip
-   * 
-   * @returns {Array<Object>} Tentativas de skip
-   */
-  getSkipAttempts() {
-    return [...this.skipAttempts];
-  }
-
-  /**
-   * Limpa estado (útil para testes)
-   */
-  reset() {
-    this.executedChecks.clear();
-    this.requiredChecks.clear();
-    this.skipAttempts = [];
-    this.logger?.info('AntiSkipMechanism resetado');
-  }
-
-  /**
-   * Valida contexto
-   * 
-   * @param {Object} context - Contexto
-   * @returns {Object} Resultado da validação
-   */
-  onValidate(context) {
+  validate(context) {
     if (!context || typeof context !== 'object') {
-      return { valid: false, errors: ['Context deve ser um objeto'] };
+      return { valid: false, reason: 'Contexto inválido' };
     }
+    const { checkId, action } = context;
+    const allowedActions = ['register', 'validate', 'markExecuted', 'preventSkip'];
 
-    if (!context.checkId || typeof context.checkId !== 'string') {
-      return { valid: false, errors: ['checkId é obrigatório e deve ser string'] };
+    if (!checkId || typeof checkId !== 'string') {
+      return { valid: false, reason: 'checkId é obrigatório' };
     }
-
-    if (!context.action || typeof context.action !== 'string') {
-      return { valid: false, errors: ['action é obrigatório e deve ser string'] };
-    }
-
-    const validActions = ['register', 'validate', 'preventSkip', 'markExecuted'];
-    if (!validActions.includes(context.action)) {
-      return { valid: false, errors: [`action deve ser um de: ${validActions.join(', ')}`] };
+    if (!action || !allowedActions.includes(action)) {
+      return { valid: false, reason: 'action inválido' };
     }
 
     return { valid: true };
   }
-
-  /**
-   * Retorna dependências do sistema
-   * 
-   * @returns {Array<string>} Dependências
-   */
-  onGetDependencies() {
-    return ['logger', 'config'];
-  }
 }
 
-export default AntiSkipMechanism;
-
 /**
- * Factory function para criar AntiSkipMechanism
- * 
- * @param {Object} config - Configuração
- * @param {Object} logger - Logger
- * @param {Object} errorHandler - Error Handler
- * @returns {AntiSkipMechanism} Instância do AntiSkipMechanism
+ * Cria nova instância do AntiSkipMechanism
+ * @param {object} config - Configuração
+ * @param {object} logger - Logger
+ * @param {object} errorHandler - ErrorHandler
+ * @returns {AntiSkipMechanism} Nova instância
  */
 export function createAntiSkipMechanism(config = null, logger = null, errorHandler = null) {
   return new AntiSkipMechanism(config, logger, errorHandler);
 }
+
+export default AntiSkipMechanism;

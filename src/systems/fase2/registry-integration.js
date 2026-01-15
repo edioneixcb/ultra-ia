@@ -21,10 +21,19 @@ export function registerFase2Systems(config, logger, errorHandler) {
   const registry = getComponentRegistry();
 
   // Registrar sistemas da FASE 2
-  registry.register('IntelligentSequentialResolver', () => createIntelligentSequentialResolver(config, logger, errorHandler), ['config', 'logger', 'errorHandler']);
+  registry.register('IntelligentSequentialResolver', 
+    (config, logger, errorHandler, astParser, baselineManager, dockerSandbox) => createIntelligentSequentialResolver(config, logger, errorHandler, astParser, baselineManager, dockerSandbox), 
+    ['config', 'logger', 'errorHandler', '?ASTParser', '?BaselineManager', '?DockerSandbox']
+  );
   registry.register('ScoreCalculator', () => createScoreCalculator(config, logger, errorHandler), ['config', 'logger', 'errorHandler']);
-  registry.register('MultiEnvironmentCompatibilityAnalyzer', () => createMultiEnvironmentCompatibilityAnalyzer(config, logger, errorHandler), ['config', 'logger', 'errorHandler']);
-  registry.register('ForensicAnalyzer', () => createForensicAnalyzer(config, logger, errorHandler), ['config', 'logger', 'errorHandler']);
+  registry.register('MultiEnvironmentCompatibilityAnalyzer', 
+    (config, logger, errorHandler, environmentDetector) => createMultiEnvironmentCompatibilityAnalyzer(config, logger, errorHandler, environmentDetector), 
+    ['config', 'logger', 'errorHandler', '?EnvironmentDetector']
+  );
+  registry.register('ForensicAnalyzer', 
+    (config, logger, errorHandler, absoluteCertaintyAnalyzer, evidenceChainManager) => createForensicAnalyzer(config, logger, errorHandler, absoluteCertaintyAnalyzer, evidenceChainManager), 
+    ['config', 'logger', 'errorHandler', '?AbsoluteCertaintyAnalyzer', '?EvidenceChainManager']
+  );
   registry.register('BatchResolver', () => createBatchResolver(config, logger, errorHandler), ['config', 'logger', 'errorHandler']);
   registry.register('CoverageCalculator', () => createCoverageCalculator(config, logger, errorHandler), ['config', 'logger', 'errorHandler']);
 }

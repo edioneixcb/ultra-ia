@@ -19,9 +19,25 @@
 import BaseSystem from '../../core/BaseSystem.js';
 
 class StaticAnalyzer extends BaseSystem {
-  async onInitialize() {
+  /**
+   * Construtor com injeção de dependências e fallback seguro.
+   * 
+   * @param {Object} config - Configuração
+   * @param {Object} logger - Logger
+   * @param {Object} errorHandler - Error Handler
+   * @param {Object} [astParser=null] - Parser AST opcional
+   */
+  constructor(config = null, logger = null, errorHandler = null, astParser = null) {
+    super(config, logger, errorHandler);
+    this.astParser = astParser;
+    this.useASTAnalysis = config?.features?.useASTAnalysis !== false && astParser !== null;
     this.analyses = new Map();
-    this.logger?.info('StaticAnalyzer inicializado');
+  }
+
+  async onInitialize() {
+    this.logger?.info('StaticAnalyzer inicializado', {
+      useASTAnalysis: this.useASTAnalysis
+    });
   }
 
   /**
@@ -39,7 +55,8 @@ class StaticAnalyzer extends BaseSystem {
 
     this.logger?.info('Analisando código estaticamente', {
       codeId: codeId || 'desconhecido',
-      analysisType
+      analysisType,
+      method: this.useASTAnalysis ? 'AST' : 'Regex'
     });
 
     let analysis;
@@ -79,6 +96,17 @@ class StaticAnalyzer extends BaseSystem {
    * @returns {Object} Análise de imports
    */
   analyzeImports(code) {
+    // Se AST Analysis estiver habilitado, usar (implementação futura aqui)
+    // if (this.useASTAnalysis) return this.analyzeImportsWithAST(code);
+    
+    // Fallback padrão: Regex
+    return this.analyzeImportsWithRegex(code);
+  }
+
+  /**
+   * Análise original baseada em Regex (Fallback Seguro)
+   */
+  analyzeImportsWithRegex(code) {
     const issues = [];
     const imports = [];
 
@@ -139,6 +167,11 @@ class StaticAnalyzer extends BaseSystem {
    * @returns {Object} Análise de contratos
    */
   analyzeContracts(code) {
+    // Regex fallback
+    return this.analyzeContractsWithRegex(code);
+  }
+
+  analyzeContractsWithRegex(code) {
     const issues = [];
 
     // Detectar chamadas de métodos
@@ -214,6 +247,11 @@ class StaticAnalyzer extends BaseSystem {
    * @returns {Object} Análise de segurança
    */
   analyzeSecurity(code) {
+    // Regex fallback
+    return this.analyzeSecurityWithRegex(code);
+  }
+
+  analyzeSecurityWithRegex(code) {
     const issues = [];
 
     // Detectar secrets hardcoded
@@ -281,6 +319,11 @@ class StaticAnalyzer extends BaseSystem {
    * @returns {Object} Análise de padrões
    */
   analyzePatterns(code) {
+    // Regex fallback
+    return this.analyzePatternsWithRegex(code);
+  }
+
+  analyzePatternsWithRegex(code) {
     const issues = [];
 
     // Padrão: eval() usage
@@ -379,6 +422,7 @@ class StaticAnalyzer extends BaseSystem {
    * @returns {Array<string>} Dependências
    */
   onGetDependencies() {
+    // ASTParser é opcional e gerenciado via injeção no createStaticAnalyzer
     return ['logger', 'config'];
   }
 }
@@ -388,11 +432,14 @@ export default StaticAnalyzer;
 /**
  * Factory function para criar StaticAnalyzer
  * 
+ * Mantém backward compatibility (3 argumentos), mas aceita 4º opcional.
+ * 
  * @param {Object} config - Configuração
  * @param {Object} logger - Logger
  * @param {Object} errorHandler - Error Handler
+ * @param {Object} [astParser=null] - Parser AST opcional
  * @returns {StaticAnalyzer} Instância do StaticAnalyzer
  */
-export function createStaticAnalyzer(config = null, logger = null, errorHandler = null) {
-  return new StaticAnalyzer(config, logger, errorHandler);
+export function createStaticAnalyzer(config = null, logger = null, errorHandler = null, astParser = null) {
+  return new StaticAnalyzer(config, logger, errorHandler, astParser);
 }

@@ -19,9 +19,18 @@ export function registerFase3Systems(config, logger, errorHandler) {
   const registry = getComponentRegistry();
 
   // Registrar sistemas da FASE 3
-  registry.register('TestExpectationValidator', () => createTestExpectationValidator(config, logger, errorHandler), ['config', 'logger', 'errorHandler']);
-  registry.register('TestValidator', () => createTestValidator(config, logger, errorHandler), ['config', 'logger', 'errorHandler']);
-  registry.register('AccurateDocumentationSystem', () => createAccurateDocumentationSystem(config, logger, errorHandler), ['config', 'logger', 'errorHandler']);
+  registry.register('TestExpectationValidator', 
+    (config, logger, errorHandler, threeERuleValidator) => createTestExpectationValidator(config, logger, errorHandler, threeERuleValidator), 
+    ['config', 'logger', 'errorHandler', '?ThreeERuleValidator']
+  );
+  registry.register('TestValidator', 
+    (config, logger, errorHandler, testExpectationValidator) => createTestValidator(config, logger, errorHandler, testExpectationValidator), 
+    ['config', 'logger', 'errorHandler', '?TestExpectationValidator']
+  );
+  registry.register('AccurateDocumentationSystem', 
+    (config, logger, errorHandler, evidenceChainManager, astParser) => createAccurateDocumentationSystem(config, logger, errorHandler, evidenceChainManager, astParser), 
+    ['config', 'logger', 'errorHandler', '?EvidenceChainManager', '?ASTParser']
+  );
   registry.register('MetaValidationSystem', () => createMetaValidationSystem(config, logger, errorHandler), ['config', 'logger', 'errorHandler']);
 }
 

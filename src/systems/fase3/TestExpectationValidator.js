@@ -15,12 +15,51 @@
  */
 
 import BaseSystem from '../../core/BaseSystem.js';
+import { getDockerSandbox } from '../../utils/DockerSandbox.js';
+import { getCacheManager } from '../../utils/CacheManager.js';
 
 class TestExpectationValidator extends BaseSystem {
+  constructor(config = null, logger = null, errorHandler = null, threeERuleValidator = null) {
+    super(config, logger, errorHandler);
+    this.threeERuleValidator = threeERuleValidator;
+    this.dockerSandbox = null; // Lazy loading para evitar dependência circular
+    this.useDockerSandbox = config?.features?.useDockerSandbox !== false;
+    this.useThreeERule = config?.features?.useThreeERule !== false && threeERuleValidator !== null;
+    this.cacheManager = null;
+    this.useCache = config?.features?.useCache !== false;
+  }
+
   async onInitialize() {
     this.validations = new Map();
     this.isolationReports = new Map();
-    this.logger?.info('TestExpectationValidator inicializado');
+    
+    // Inicializar DockerSandbox se habilitado (lazy loading)
+    if (this.useDockerSandbox) {
+      try {
+        this.dockerSandbox = getDockerSandbox(this.config, this.logger, this.errorHandler);
+        this.logger?.debug('DockerSandbox obtido para TestExpectationValidator');
+      } catch (e) {
+        this.logger?.warn('DockerSandbox não disponível, usando fallback', { error: e.message });
+        this.useDockerSandbox = false;
+      }
+    }
+
+    // Inicializar cache LRU se habilitado
+    if (this.useCache) {
+      try {
+        this.cacheManager = getCacheManager(this.config, this.logger);
+        this.logger?.debug('CacheManager integrado no TestExpectationValidator');
+      } catch (e) {
+        this.logger?.warn('Erro ao obter CacheManager, continuando sem cache', { error: e.message });
+        this.useCache = false;
+      }
+    }
+
+    this.logger?.info('TestExpectationValidator inicializado', {
+      useDockerSandbox: this.useDockerSandbox,
+      useThreeERule: this.useThreeERule,
+      useCache: this.useCache
+    });
   }
 
   /**
@@ -52,7 +91,7 @@ class TestExpectationValidator extends BaseSystem {
   }
 
   /**
-   * Valida expectativas antes de escrever teste
+   * Valida expectativas antes de escrever teste usando DockerSandbox e ThreeERuleValidator quando disponível (com cache)
    * 
    * @param {Object} test - Teste com expectativas
    * @param {Object} implementation - Implementação a testar
@@ -60,7 +99,39 @@ class TestExpectationValidator extends BaseSystem {
    * @returns {Promise<Object>} Resultado da validação
    */
   async validateExpectationsBeforeWriting(test, implementation, validationId = null) {
-    // Executar implementação para obter comportamento real
+    // Verificar cache se habilitado
+    if (this.useCache && this.cacheManager) {
+      const cacheKey = `testexp:${test.id || test.name || 'default'}:${implementation.code?.substring(0, 50) || 'default'}`;
+      const cached = this.cacheManager.get(cacheKey);
+      if (cached) {
+        this.logger?.debug('Validação de expectativas retornada do cache');
+        return cached;
+      }
+    }
+
+    // Validar regra dos 3E se ThreeERuleValidator disponível
+    let threeEValidation = null;
+    if (this.useThreeERule && this.threeERuleValidator) {
+      try {
+        // Criar check temporário para validação 3E
+        const check = {
+          especificacao: test.description || test.specification || 'Teste de expectativa',
+          execucao: test.code || implementation.code || 'Código de teste',
+          evidencia: test.expectedOutput || test.evidence || 'Resultado esperado'
+        };
+
+        threeEValidation = this.threeERuleValidator.validate(check);
+        if (!threeEValidation.valid) {
+          this.logger?.warn('Teste não passa na regra dos 3E', {
+            missing: threeEValidation.missing
+          });
+        }
+      } catch (e) {
+        this.logger?.warn('Erro ao validar regra dos 3E', { error: e.message });
+      }
+    }
+
+    // Executar implementação para obter comportamento real (usar DockerSandbox se disponível)
     const actualBehavior = await this.executeImplementation(implementation);
 
     // Comparar expectativas com comportamento real
@@ -70,12 +141,23 @@ class TestExpectationValidator extends BaseSystem {
     const correctExpectations = await this.suggestCorrectExpectations(actualBehavior);
 
     const result = {
-      valid: mismatch.length === 0,
+      valid: mismatch.length === 0 && (threeEValidation === null || threeEValidation.valid),
       mismatches: mismatch,
       correctExpectations,
       suggestions: await this.generateSuggestions(mismatch),
-      actualBehavior
+      actualBehavior,
+      threeEValidation
     };
+
+    // Adicionar avisos se 3E não válido
+    if (threeEValidation && !threeEValidation.valid) {
+      result.warnings = result.warnings || [];
+      result.warnings.push({
+        type: 'three_e_validation_failed',
+        message: `Teste não passa na regra dos 3E: faltam ${threeEValidation.missing.join(', ')}`,
+        missing: threeEValidation.missing
+      });
+    }
 
     // Armazenar validação
     const id = validationId || `validation-${Date.now()}`;
@@ -86,38 +168,86 @@ class TestExpectationValidator extends BaseSystem {
       validatedAt: new Date().toISOString()
     });
 
+    // Armazenar no cache se habilitado
+    if (this.useCache && this.cacheManager) {
+      const cacheKey = `testexp:${test.id || test.name || 'default'}:${implementation.code?.substring(0, 50) || 'default'}`;
+      this.cacheManager.set(cacheKey, result, 3600000); // Cache por 1 hora
+    }
+
     return result;
   }
 
   /**
-   * Executa implementação para obter comportamento real
+   * Executa implementação para obter comportamento real usando DockerSandbox quando disponível
    * 
    * @param {Object} implementation - Implementação
    * @returns {Promise<Object>} Comportamento real
    */
   async executeImplementation(implementation) {
-    // Simplificado - em produção executaria código real
-    if (implementation.code) {
-      // Executar código e capturar resultado
+    if (!implementation || !implementation.code) {
+      return {
+        output: 'no_code_provided',
+        returnValue: null,
+        source: 'fallback'
+      };
+    }
+
+    // Se DockerSandbox disponível, executar em sandbox isolado
+    if (this.useDockerSandbox && this.dockerSandbox) {
       try {
-        // Em produção, executaria em sandbox isolado
-        return {
-          output: 'executed',
-          returnValue: null,
-          sideEffects: []
+        const language = implementation.language || 'javascript';
+        const executionResult = await this.dockerSandbox.execute(
+          implementation.code,
+          language,
+          {
+            timeout: 5000, // Timeout curto para validação rápida
+            expectedOutput: implementation.expectedOutput || null
+          }
+        );
+
+        const execResult = {
+          output: executionResult.stdout || '',
+          error: executionResult.stderr || null,
+          returnValue: executionResult.exitCode === 0 ? executionResult.stdout : null,
+          sideEffects: [],
+          success: executionResult.success,
+          exitCode: executionResult.exitCode,
+          matchesExpected: executionResult.matchesExpected,
+          source: 'docker_sandbox',
+          executionId: executionResult.executionId
         };
+
+        // Armazenar no cache se habilitado
+        if (this.useCache && this.cacheManager) {
+          const cacheKey = `exec:${implementation.code.substring(0, 100).replace(/\s+/g, '')}:${implementation.language || 'js'}`;
+          this.cacheManager.set(cacheKey, execResult, 1800000); // Cache por 30 minutos
+        }
+
+        return execResult;
       } catch (error) {
-        return {
-          error: error.message,
-          output: null
-        };
+        this.logger?.warn('Erro ao executar em DockerSandbox, usando fallback', {
+          error: error.message
+        });
+        // Continuar com fallback
       }
     }
 
-    return {
-      output: 'no_code_provided',
-      returnValue: null
+    // Fallback: execução simplificada (não executa código real por segurança)
+    const fallbackResult = {
+      output: 'executed_fallback',
+      returnValue: null,
+      sideEffects: [],
+      source: 'fallback',
+      warning: 'Código não executado em sandbox isolado. Use DockerSandbox para execução real.'
     };
+
+    // Armazenar no cache se habilitado
+    if (this.useCache && this.cacheManager) {
+      const cacheKey = `exec:${implementation.code.substring(0, 100).replace(/\s+/g, '')}:${implementation.language || 'js'}`;
+      this.cacheManager.set(cacheKey, fallbackResult, 1800000); // Cache por 30 minutos
+    }
+
+    return fallbackResult;
   }
 
   /**
@@ -219,7 +349,7 @@ class TestExpectationValidator extends BaseSystem {
   }
 
   /**
-   * Garante isolamento completo de testes
+   * Garante isolamento completo de testes usando DockerSandbox quando disponível
    * 
    * @param {Object} testSuite - Suite de testes
    * @param {string} validationId - ID da validação (opcional)
@@ -235,20 +365,32 @@ class TestExpectationValidator extends BaseSystem {
     // Identificar necessidades de limpeza de cache
     const cacheClearingNeeds = await this.identifyCacheClearingNeeds(testSuite);
 
+    // Se DockerSandbox disponível, validar isolamento real executando testes em containers separados
+    let realIsolationValidation = null;
+    if (this.useDockerSandbox && this.dockerSandbox && testSuite.tests) {
+      try {
+        realIsolationValidation = await this.validateRealIsolation(testSuite);
+      } catch (e) {
+        this.logger?.warn('Erro ao validar isolamento real com DockerSandbox', { error: e.message });
+      }
+    }
+
     // Gerar código de isolamento
     const isolationCode = await this.generateIsolationCode({
       dependencies,
       stateLeaks,
-      cacheClearing: cacheClearingNeeds
+      cacheClearing: cacheClearingNeeds,
+      realIsolation: realIsolationValidation
     });
 
     const result = {
-      isolated: stateLeaks.length === 0,
+      isolated: stateLeaks.length === 0 && (!realIsolationValidation || realIsolationValidation.isolated),
       isolationCode,
       dependencies,
       stateLeaks,
       cacheClearingNeeds,
-      recommendations: await this.generateIsolationRecommendations(stateLeaks)
+      recommendations: await this.generateIsolationRecommendations(stateLeaks),
+      realIsolationValidation
     };
 
     // Armazenar relatório
@@ -260,6 +402,60 @@ class TestExpectationValidator extends BaseSystem {
     });
 
     return result;
+  }
+
+  /**
+   * Valida isolamento real executando testes em containers Docker separados
+   * 
+   * @param {Object} testSuite - Suite de testes
+   * @returns {Promise<Object>} Resultado da validação de isolamento real
+   */
+  async validateRealIsolation(testSuite) {
+    if (!testSuite.tests || testSuite.tests.length === 0) {
+      return { isolated: true, reason: 'Nenhum teste para validar' };
+    }
+
+    const isolationResults = [];
+    const sharedState = new Set();
+
+    for (const test of testSuite.tests) {
+      if (!test.code) continue;
+
+      try {
+        // Executar teste em sandbox isolado
+        const result = await this.dockerSandbox.execute(
+          test.code,
+          'javascript',
+          { timeout: 3000 }
+        );
+
+        // Verificar se teste modifica estado global (simplificado)
+        if (test.code.includes('global.') || test.code.includes('process.env')) {
+          sharedState.add(test.name || 'unknown');
+        }
+
+        isolationResults.push({
+          test: test.name || 'unknown',
+          isolated: result.success !== false,
+          executionId: result.executionId
+        });
+      } catch (e) {
+        isolationResults.push({
+          test: test.name || 'unknown',
+          isolated: false,
+          error: e.message
+        });
+      }
+    }
+
+    const allIsolated = isolationResults.every(r => r.isolated);
+    
+    return {
+      isolated: allIsolated,
+      results: isolationResults,
+      sharedState: Array.from(sharedState),
+      method: 'docker_sandbox'
+    };
   }
 
   /**
@@ -488,7 +684,7 @@ class TestExpectationValidator extends BaseSystem {
    * @returns {Array<string>} Dependências
    */
   onGetDependencies() {
-    return ['logger', 'config'];
+    return ['logger', 'config', '?ThreeERuleValidator'];
   }
 }
 
@@ -500,8 +696,9 @@ export default TestExpectationValidator;
  * @param {Object} config - Configuração
  * @param {Object} logger - Logger
  * @param {Object} errorHandler - Error Handler
+ * @param {Object} threeERuleValidator - ThreeE Rule Validator (opcional)
  * @returns {TestExpectationValidator} Instância do TestExpectationValidator
  */
-export function createTestExpectationValidator(config = null, logger = null, errorHandler = null) {
-  return new TestExpectationValidator(config, logger, errorHandler);
+export function createTestExpectationValidator(config = null, logger = null, errorHandler = null, threeERuleValidator = null) {
+  return new TestExpectationValidator(config, logger, errorHandler, threeERuleValidator);
 }

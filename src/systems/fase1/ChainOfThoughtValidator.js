@@ -19,7 +19,10 @@ import BaseSystem from '../../core/BaseSystem.js';
 class ChainOfThoughtValidator extends BaseSystem {
   async onInitialize() {
     this.validatedThoughts = new Map();
-    this.logger?.info('ChainOfThoughtValidator inicializado');
+    this.strictValidation = this.config?.features?.strictValidation === true;
+    this.logger?.info('ChainOfThoughtValidator inicializado', {
+      strictValidation: this.strictValidation
+    });
   }
 
   /**
@@ -83,10 +86,14 @@ class ChainOfThoughtValidator extends BaseSystem {
     }
 
     if (missing.length > 0) {
-      const error = new Error(
-        `Chain-of-Thought incompleto. Faltando: ${missing.join(', ')}. ` +
-        `Componentes obrigatórios: OBSERVAÇÃO, ANÁLISE, DECISÃO, AÇÃO`
-      );
+      const errorMsg = `Chain-of-Thought incompleto. Faltando: ${missing.join(', ')}. Componentes obrigatórios: OBSERVAÇÃO, ANÁLISE, DECISÃO, AÇÃO`;
+      
+      // Se strictValidation habilitado, não aceita incompleto
+      // Se desabilitado, mantém comportamento original que lança erro (pois é validador)
+      // O objetivo de um validador é validar. Se falha, deve reportar erro.
+      // O BaseSystem.execute captura erros.
+      
+      const error = new Error(errorMsg);
 
       this.logger?.error('Chain-of-thought incompleto', {
         missing,

@@ -205,11 +205,13 @@ class TimeoutManager {
   }
 }
 
-// Singleton instance
+// Singleton instance with initialization lock
 let instance = null;
+let initializationPromise = null;
 
 /**
  * Obtém instância singleton do TimeoutManager
+ * Thread-safe: previne criação dupla durante inicialização concorrente
  */
 export function getTimeoutManager(config = null, logger = null) {
   if (!instance) {

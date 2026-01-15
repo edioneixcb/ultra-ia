@@ -177,6 +177,72 @@ class DatabaseManager {
   }
 
   /**
+   * Executa uma função com conexão garantindo fechamento automático em caso de erro
+   * @param {string} dbPath - Caminho do banco de dados
+   * @param {Function} fn - Função que recebe a conexão
+   * @param {object} options - Opções { label, closeOnComplete }
+   * @returns {Promise<any>} Resultado da função
+   */
+  async withConnection(dbPath, fn, options = {}) {
+    const { label = null, closeOnComplete = false } = options;
+    const key = label || dbPath;
+    let db = null;
+    
+    try {
+      db = this.getConnection(dbPath, label);
+      this.updateLastUsed(key);
+      const result = await fn(db);
+      return result;
+    } catch (error) {
+      this.logger?.error('Erro durante operação com conexão', {
+        key,
+        error: error.message
+      });
+      throw error;
+    } finally {
+      // Atualizar último uso ou fechar se solicitado
+      if (closeOnComplete && db) {
+        this.closeConnection(key);
+      } else {
+        this.updateLastUsed(key);
+      }
+    }
+  }
+
+  /**
+   * Executa uma função de forma síncrona com conexão garantindo tratamento de erro
+   * @param {string} dbPath - Caminho do banco de dados
+   * @param {Function} fn - Função que recebe a conexão
+   * @param {object} options - Opções { label, closeOnComplete }
+   * @returns {any} Resultado da função
+   */
+  withConnectionSync(dbPath, fn, options = {}) {
+    const { label = null, closeOnComplete = false } = options;
+    const key = label || dbPath;
+    let db = null;
+    
+    try {
+      db = this.getConnection(dbPath, label);
+      this.updateLastUsed(key);
+      const result = fn(db);
+      return result;
+    } catch (error) {
+      this.logger?.error('Erro durante operação síncrona com conexão', {
+        key,
+        error: error.message
+      });
+      throw error;
+    } finally {
+      // Atualizar último uso ou fechar se solicitado
+      if (closeOnComplete && db) {
+        this.closeConnection(key);
+      } else {
+        this.updateLastUsed(key);
+      }
+    }
+  }
+
+  /**
    * Obtém estatísticas do pool
    * @returns {object} Estatísticas
    */
@@ -231,17 +297,50 @@ class DatabaseManager {
   }
 }
 
-// Singleton instance
+// Singleton instance with initialization lock
 let instance = null;
+let initializationPromise = null;
 
 /**
  * Obtém instância singleton do DatabaseManager
+ * Thread-safe: previne criação dupla durante inicialização concorrente
  */
 export function getDatabaseManager(config = null, logger = null) {
-  if (!instance) {
+  // Fast path: instância já existe
+  if (instance) {
+    return instance;
+  }
+
+  // Se não há inicialização em andamento, criar agora (síncrono)
+  if (!initializationPromise) {
     instance = new DatabaseManager(config, logger);
   }
+  
   return instance;
+}
+
+/**
+ * Obtém instância singleton do DatabaseManager de forma assíncrona
+ * Garante thread-safety em contextos assíncronos
+ */
+export async function getDatabaseManagerAsync(config = null, logger = null) {
+  // Fast path: instância já existe
+  if (instance) {
+    return instance;
+  }
+
+  // Se há inicialização em andamento, aguardar
+  if (initializationPromise) {
+    return await initializationPromise;
+  }
+
+  // Iniciar inicialização
+  initializationPromise = new Promise((resolve) => {
+    instance = new DatabaseManager(config, logger);
+    resolve(instance);
+  });
+
+  return await initializationPromise;
 }
 
 /**

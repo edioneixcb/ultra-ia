@@ -19,7 +19,10 @@ import BaseSystem from '../../core/BaseSystem.js';
 class LoggingValidator extends BaseSystem {
   async onInitialize() {
     this.validations = new Map();
-    this.logger?.info('LoggingValidator inicializado');
+    this.strictValidation = this.config?.features?.strictValidation === true;
+    this.logger?.info('LoggingValidator inicializado', {
+      strictValidation: this.strictValidation
+    });
   }
 
   /**
@@ -40,6 +43,15 @@ class LoggingValidator extends BaseSystem {
     });
 
     const validation = this.validate(code);
+
+    // Se strict validation, lançar erro se houver uso de console
+    if (this.strictValidation && !validation.valid) {
+      const error = new Error('Uso de console detectado em modo strict');
+      this.logger?.error('Validação de logging falhou', { 
+        issues: validation.consoleUsage 
+      });
+      throw error;
+    }
 
     // Armazenar validação
     const id = codeId || `validation-${Date.now()}`;

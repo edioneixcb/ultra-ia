@@ -90,6 +90,24 @@ node scripts/test-mcp-server.js
 
 ## 🔧 Configuração
 
+### Variáveis de Ambiente
+
+Copie `.env.example` para `.env` e configure:
+
+```bash
+cp .env.example .env
+# Edite .env com suas configurações
+```
+
+Variáveis principais:
+- `NODE_ENV` - Ambiente (development/production)
+- `PORT` - Porta do servidor API
+- `OLLAMA_URL` - URL do servidor Ollama
+- `API_AUTH_ENABLED` - Habilitar autenticação (recomendado em produção)
+- `API_KEY` - Chave de API para autenticação
+
+### Arquivo de Configuração
+
 Edite `config/config.json` para:
 - Configurar modelos Ollama
 - Ajustar timeouts

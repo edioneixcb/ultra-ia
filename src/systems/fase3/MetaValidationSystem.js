@@ -20,12 +20,33 @@
  */
 
 import BaseSystem from '../../core/BaseSystem.js';
+import { getCacheManager } from '../../utils/CacheManager.js';
 
 class MetaValidationSystem extends BaseSystem {
+  constructor(config = null, logger = null, errorHandler = null) {
+    super(config, logger, errorHandler);
+    this.cacheManager = null;
+    this.useCache = config?.features?.useCache !== false;
+  }
+
   async onInitialize() {
     this.validations = new Map();
     this.checklistCache = new Map();
-    this.logger?.info('MetaValidationSystem inicializado');
+    
+    // Inicializar cache LRU se habilitado
+    if (this.useCache) {
+      try {
+        this.cacheManager = getCacheManager(this.config, this.logger);
+        this.logger?.debug('CacheManager integrado no MetaValidationSystem');
+      } catch (e) {
+        this.logger?.warn('Erro ao obter CacheManager, continuando sem cache', { error: e.message });
+        this.useCache = false;
+      }
+    }
+    
+    this.logger?.info('MetaValidationSystem inicializado', {
+      useCache: this.useCache
+    });
   }
 
   /**
@@ -60,28 +81,412 @@ class MetaValidationSystem extends BaseSystem {
   }
 
   /**
-   * Valida auditoria completa
+   * Valida auditoria completa com checklist de 18 itens, validação recursiva e condicional
    * 
    * @param {Object} audit - Auditoria a validar
+   * @param {number} depth - Profundidade da validação recursiva (padrão 0)
    * @returns {Promise<Object>} Resultado da validação
    */
-  async validateAudit(audit) {
-    const checklist = {
-      completeness: await this.validateCompleteness(audit),
-      naValidity: await this.validateNA(audit),
-      consistency: await this.validateConsistency(audit),
-      traceability: await this.validateTraceability(audit),
-      coverage: await this.validateCoverage(audit),
-      roadmapQuality: await this.validateRoadmap(audit)
-    };
+  async validateAudit(audit, depth = 0) {
+    const maxDepth = this.config?.fase3?.metaValidationSystem?.maxRecursionDepth || 3;
+    
+    // Prevenir recursão infinita
+    if (depth > maxDepth) {
+      this.logger?.warn('Profundidade máxima de recursão atingida', { depth, maxDepth });
+      return {
+        valid: false,
+        error: 'Profundidade máxima de recursão atingida',
+        checklist: {}
+      };
+    }
 
-    const allPassed = Object.values(checklist).every(v => v.passed);
+    // Executar checklist completo de 18 itens
+    const checklist = await this.executeFullChecklist(audit, depth);
+
+    // Validação recursiva: se há sub-auditorias, validar recursivamente
+    const recursiveValidations = [];
+    if (audit.subAudits && Array.isArray(audit.subAudits) && depth < maxDepth) {
+      for (const subAudit of audit.subAudits) {
+        const recursiveResult = await this.validateAudit(subAudit, depth + 1);
+        recursiveValidations.push({
+          subAuditId: subAudit.id || 'unknown',
+          result: recursiveResult
+        });
+      }
+    }
+
+    // Validação condicional: alguns itens só são validados se condições específicas são atendidas
+    const conditionalValidations = await this.executeConditionalValidations(audit, checklist);
+
+    const allPassed = Object.values(checklist).every(v => v.passed) &&
+                      recursiveValidations.every(r => r.result.valid) &&
+                      conditionalValidations.every(c => c.passed);
 
     return {
       valid: allPassed,
       checklist,
+      conditionalValidations,
+      recursiveValidations,
       auditOfAudit: await this.auditTheAudit(audit),
-      score: this.calculateMetaValidationScore(checklist)
+      score: this.calculateMetaValidationScore(checklist),
+      depth
+    };
+  }
+
+  /**
+   * Executa checklist completo de 18 itens obrigatórios (com cache)
+   * 
+   * @param {Object} audit - Auditoria
+   * @param {number} depth - Profundidade atual
+   * @returns {Promise<Object>} Checklist completo
+   */
+  async executeFullChecklist(audit, depth = 0) {
+    // Verificar cache se habilitado e não em recursão profunda
+    if (this.useCache && this.cacheManager && depth === 0) {
+      const cacheKey = `checklist:${audit.id || audit.version || 'default'}`;
+      const cached = this.cacheManager.get(cacheKey);
+      if (cached) {
+        this.logger?.debug('Checklist retornado do cache');
+        return cached;
+      }
+    }
+
+    const checklist = {
+      // 1-2: Completude de checkpoints e checks
+      completeness: await this.validateCompleteness(audit),
+      
+      // 3-4: Validade dos N/A (justificativa e evidência)
+      naValidity: await this.validateNA(audit),
+      
+      // 5-6: Consistência de evidências e resultados
+      consistency: await this.validateConsistency(audit),
+      
+      // 7-8: Rastreabilidade (matriz completa e mapeamentos)
+      traceability: await this.validateTraceability(audit),
+      
+      // 9-10: Cobertura (total e por alvo)
+      coverage: await this.validateCoverage(audit),
+      
+      // 11-12: Qualidade do roadmap (formato e duplicatas)
+      roadmapQuality: await this.validateRoadmap(audit),
+      
+      // 13-14: Evidências diretas e níveis adequados
+      evidenceQuality: await this.validateEvidenceQuality(audit),
+      
+      // 15-16: Regra dos 3E e micro-checkpoints
+      threeERule: await this.validateThreeERule(audit),
+      microCheckpoints: await this.validateMicroCheckpoints(audit),
+      
+      // 17-18: Timestamps e metadados
+      timestamps: await this.validateTimestamps(audit),
+      metadata: await this.validateMetadata(audit)
+    };
+
+    // Armazenar no cache se habilitado e não em recursão profunda
+    if (this.useCache && this.cacheManager && depth === 0) {
+      const cacheKey = `checklist:${audit.id || audit.version || 'default'}`;
+      this.cacheManager.set(cacheKey, checklist, 1800000); // Cache por 30 minutos
+    }
+
+    return checklist;
+  }
+
+  /**
+   * Valida qualidade das evidências (itens 13-14)
+   * 
+   * @param {Object} audit - Auditoria
+   * @returns {Promise<Object>} Resultado da validação
+   */
+  async validateEvidenceQuality(audit) {
+    const issues = [];
+
+    if (!audit.checks) {
+      return { passed: true, issues: [] };
+    }
+
+    for (const check of audit.checks) {
+      // Item 13: Evidências diretas (não inferidas)
+      if (check.evidence && check.evidence.inferred) {
+        issues.push({
+          type: 'inferred_evidence',
+          checkId: check.id,
+          description: `Check ${check.id} tem evidência inferida, não direta`
+        });
+      }
+
+      // Item 14: Nível de evidência adequado para severidade
+      if (!this.validateEvidenceLevel(check)) {
+        issues.push({
+          type: 'insufficient_evidence_level',
+          checkId: check.id,
+          description: `Check ${check.id} não tem nível de evidência adequado para severidade ${check.severity}`
+        });
+      }
+    }
+
+    return {
+      passed: issues.length === 0,
+      issues
+    };
+  }
+
+  /**
+   * Valida regra dos 3E (item 15)
+   * 
+   * @param {Object} audit - Auditoria
+   * @returns {Promise<Object>} Resultado da validação
+   */
+  async validateThreeERule(audit) {
+    const issues = [];
+
+    if (!audit.checks) {
+      return { passed: true, issues: [] };
+    }
+
+    for (const check of audit.checks) {
+      if (!this.validateThreeE(check)) {
+        issues.push({
+          type: 'three_e_rule_violation',
+          checkId: check.id,
+          description: `Check ${check.id} não passa na regra dos 3E (ESPECIFICAÇÃO, EXECUÇÃO, EVIDÊNCIA)`
+        });
+      }
+    }
+
+    return {
+      passed: issues.length === 0,
+      issues
+    };
+  }
+
+  /**
+   * Valida micro-checkpoints (item 16)
+   * 
+   * @param {Object} audit - Auditoria
+   * @returns {Promise<Object>} Resultado da validação
+   */
+  async validateMicroCheckpoints(audit) {
+    const issues = [];
+
+    if (!audit.microCheckpoints) {
+      return { passed: true, issues: [] };
+    }
+
+    for (const microCheckpoint of audit.microCheckpoints) {
+      if (!microCheckpoint.resolved) {
+        issues.push({
+          type: 'unresolved_micro_checkpoint',
+          microCheckpointId: microCheckpoint.id,
+          description: `Micro-checkpoint ${microCheckpoint.id} não foi resolvido`
+        });
+      }
+    }
+
+    return {
+      passed: issues.length === 0,
+      issues
+    };
+  }
+
+  /**
+   * Valida timestamps (item 17)
+   * 
+   * @param {Object} audit - Auditoria
+   * @returns {Promise<Object>} Resultado da validação
+   */
+  async validateTimestamps(audit) {
+    const issues = [];
+
+    // Verificar se audit tem timestamp
+    if (!audit.timestamp && !audit.createdAt) {
+      issues.push({
+        type: 'missing_timestamp',
+        description: 'Auditoria não tem timestamp de criação'
+      });
+    }
+
+    // Verificar se checks têm timestamps
+    if (audit.checks) {
+      for (const check of audit.checks) {
+        if (!check.timestamp && !check.executedAt) {
+          issues.push({
+            type: 'missing_check_timestamp',
+            checkId: check.id,
+            description: `Check ${check.id} não tem timestamp de execução`
+          });
+        }
+      }
+    }
+
+    return {
+      passed: issues.length === 0,
+      issues
+    };
+  }
+
+  /**
+   * Valida metadados (item 18)
+   * 
+   * @param {Object} audit - Auditoria
+   * @returns {Promise<Object>} Resultado da validação
+   */
+  async validateMetadata(audit) {
+    const issues = [];
+
+    // Verificar metadados obrigatórios
+    const requiredMetadata = ['id', 'version', 'target'];
+    for (const field of requiredMetadata) {
+      if (!audit[field]) {
+        issues.push({
+          type: 'missing_metadata',
+          field,
+          description: `Metadado obrigatório '${field}' não encontrado na auditoria`
+        });
+      }
+    }
+
+    return {
+      passed: issues.length === 0,
+      issues
+    };
+  }
+
+  /**
+   * Executa validações condicionais baseadas em contexto
+   * 
+   * @param {Object} audit - Auditoria
+   * @param {Object} checklist - Checklist já executado
+   * @returns {Promise<Array<Object>>} Validações condicionais
+   */
+  async executeConditionalValidations(audit, checklist) {
+    const conditionalValidations = [];
+
+    // Validação condicional 1: Se roadmap existe, validar dependências entre fases
+    if (audit.roadmap && checklist.roadmapQuality.passed) {
+      const roadmapDeps = await this.validateRoadmapDependencies(audit.roadmap);
+      conditionalValidations.push({
+        name: 'roadmap_dependencies',
+        condition: 'roadmap exists and is valid',
+        passed: roadmapDeps.passed,
+        issues: roadmapDeps.issues
+      });
+    }
+
+    // Validação condicional 2: Se há sub-auditorias, validar consistência entre elas
+    if (audit.subAudits && audit.subAudits.length > 0) {
+      const subAuditConsistency = await this.validateSubAuditConsistency(audit.subAudits);
+      conditionalValidations.push({
+        name: 'sub_audit_consistency',
+        condition: 'sub-audits exist',
+        passed: subAuditConsistency.passed,
+        issues: subAuditConsistency.issues
+      });
+    }
+
+    // Validação condicional 3: Se cobertura está abaixo do mínimo, validar justificativa
+    if (audit.coverage && audit.coverage.total && audit.coverage.total.percentage < 95) {
+      const coverageJustification = await this.validateCoverageJustification(audit);
+      conditionalValidations.push({
+        name: 'coverage_justification',
+        condition: 'coverage below minimum',
+        passed: coverageJustification.passed,
+        issues: coverageJustification.issues
+      });
+    }
+
+    return conditionalValidations;
+  }
+
+  /**
+   * Valida dependências do roadmap
+   * 
+   * @param {Object} roadmap - Roadmap
+   * @returns {Promise<Object>} Resultado da validação
+   */
+  async validateRoadmapDependencies(roadmap) {
+    const issues = [];
+
+    if (!roadmap.phases || !Array.isArray(roadmap.phases)) {
+      return { passed: true, issues: [] };
+    }
+
+    // Verificar se fases têm dependências válidas
+    for (const phase of roadmap.phases) {
+      if (phase.dependsOn && Array.isArray(phase.dependsOn)) {
+        for (const dep of phase.dependsOn) {
+          const depExists = roadmap.phases.some(p => p.id === dep || p.name === dep);
+          if (!depExists) {
+            issues.push({
+              type: 'invalid_dependency',
+              phase: phase.id || phase.name,
+              dependency: dep,
+              description: `Fase ${phase.id || phase.name} depende de fase inexistente: ${dep}`
+            });
+          }
+        }
+      }
+    }
+
+    return {
+      passed: issues.length === 0,
+      issues
+    };
+  }
+
+  /**
+   * Valida consistência entre sub-auditorias
+   * 
+   * @param {Array<Object>} subAudits - Sub-auditorias
+   * @returns {Promise<Object>} Resultado da validação
+   */
+  async validateSubAuditConsistency(subAudits) {
+    const issues = [];
+
+    // Verificar se todas as sub-auditorias têm mesma estrutura básica
+    const firstAudit = subAudits[0];
+    if (firstAudit) {
+      const requiredFields = ['id', 'checks'];
+      for (let i = 1; i < subAudits.length; i++) {
+        for (const field of requiredFields) {
+          if (!subAudits[i][field] && firstAudit[field]) {
+            issues.push({
+              type: 'inconsistent_structure',
+              subAuditId: subAudits[i].id,
+              missingField: field,
+              description: `Sub-auditoria ${subAudits[i].id} não tem campo ${field}`
+            });
+          }
+        }
+      }
+    }
+
+    return {
+      passed: issues.length === 0,
+      issues
+    };
+  }
+
+  /**
+   * Valida justificativa para cobertura abaixo do mínimo
+   * 
+   * @param {Object} audit - Auditoria
+   * @returns {Promise<Object>} Resultado da validação
+   */
+  async validateCoverageJustification(audit) {
+    const issues = [];
+
+    if (audit.coverage && audit.coverage.total && audit.coverage.total.percentage < 95) {
+      if (!audit.coverage.justification || audit.coverage.justification.trim().length === 0) {
+        issues.push({
+          type: 'missing_coverage_justification',
+          description: 'Cobertura abaixo do mínimo mas não há justificativa'
+        });
+      }
+    }
+
+    return {
+      passed: issues.length === 0,
+      issues
     };
   }
 

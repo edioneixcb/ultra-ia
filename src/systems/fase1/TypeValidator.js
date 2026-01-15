@@ -7,6 +7,7 @@
  * - Detector de uso de any
  * - Inferência de tipos do contexto
  * - Sugestão de tipos específicos
+ * - Análise AST (Opcional)
  * 
  * Métricas de Sucesso:
  * - 0% de uso de any em código gerado
@@ -17,9 +18,25 @@
 import BaseSystem from '../../core/BaseSystem.js';
 
 class TypeValidator extends BaseSystem {
+  /**
+   * Construtor com injeção de dependências
+   * 
+   * @param {Object} config - Configuração
+   * @param {Object} logger - Logger
+   * @param {Object} errorHandler - Error Handler
+   * @param {Object} [astParser=null] - Parser AST opcional
+   */
+  constructor(config = null, logger = null, errorHandler = null, astParser = null) {
+    super(config, logger, errorHandler);
+    this.astParser = astParser;
+    this.useASTTypeAnalysis = config?.features?.useASTTypeAnalysis !== false && astParser !== null;
+  }
+
   async onInitialize() {
     this.validations = new Map();
-    this.logger?.info('TypeValidator inicializado');
+    this.logger?.info('TypeValidator inicializado', {
+      useASTTypeAnalysis: this.useASTTypeAnalysis
+    });
   }
 
   /**
@@ -71,6 +88,14 @@ class TypeValidator extends BaseSystem {
    * @returns {Array<Object>} Usos de any encontrados
    */
   detectAnyUsage(code) {
+    // Se análise AST habilitada, usar implementação futura
+    // if (this.useASTTypeAnalysis) return this.detectAnyUsageWithAST(code);
+
+    // Fallback: Regex
+    return this.detectAnyUsageWithRegex(code);
+  }
+
+  detectAnyUsageWithRegex(code) {
     const usage = [];
     
     // Padrão 1: parâmetros de função
@@ -250,8 +275,9 @@ export default TypeValidator;
  * @param {Object} config - Configuração
  * @param {Object} logger - Logger
  * @param {Object} errorHandler - Error Handler
+ * @param {Object} [astParser=null] - Parser AST opcional
  * @returns {TypeValidator} Instância do TypeValidator
  */
-export function createTypeValidator(config = null, logger = null, errorHandler = null) {
-  return new TypeValidator(config, logger, errorHandler);
+export function createTypeValidator(config = null, logger = null, errorHandler = null, astParser = null) {
+  return new TypeValidator(config, logger, errorHandler, astParser);
 }

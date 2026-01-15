@@ -3,6 +3,43 @@
  * 
  * Resolve erros em ordem estratégica garantindo que cada correção não cause impacto negativo.
  * 
+ * @module IntelligentSequentialResolver
+ * @class IntelligentSequentialResolver
+ * @extends BaseSystem
+ * 
+ * @description
+ * Sistema avançado de resolução de erros que:
+ * - Ordena correções estrategicamente baseado em dependências
+ * - Analisa impacto em cascata antes de aplicar correções
+ * - Valida cada correção após aplicação
+ * - Reverte automaticamente correções problemáticas
+ * - Utiliza cache LRU para otimização de performance
+ * 
+ * @example
+ * ```javascript
+ * const resolver = new IntelligentSequentialResolver(config, logger, errorHandler, astParser, baselineManager);
+ * await resolver.initialize();
+ * 
+ * const result = await resolver.execute({
+ *   errors: [{ id: 'error1', message: 'Syntax error', type: 'syntax' }],
+ *   codebase: { files: { 'test.js': { content: 'const x = 1' } } },
+ *   resolutionId: 'resolution-1'
+ * });
+ * ```
+ * 
+ * @param {Object} config - Configuração do sistema
+ * @param {Object} logger - Logger para registro de eventos
+ * @param {Object} errorHandler - Manipulador de erros
+ * @param {Object} astParser - Parser AST opcional para validação
+ * @param {Object} baselineManager - Gerenciador de baseline opcional
+ * @param {Object} dockerSandbox - Sandbox Docker opcional para validação
+ * 
+ * @property {boolean} useASTValidation - Habilita validação AST quando disponível
+ * @property {boolean} useBaselineComparison - Habilita comparação com baseline quando disponível
+ * @property {boolean} useDockerValidation - Habilita validação Docker quando disponível
+ * @property {boolean} useCache - Habilita cache LRU
+ * @property {Object} cacheManager - Gerenciador de cache LRU
+ * 
  * Funcionalidades:
  * - Ordenação Estratégica de Correções (identificar dependências entre erros)
  * - Análise de Impacto em Cascata (analisar TODOS os impactos possíveis antes de corrigir)
@@ -16,13 +53,41 @@
  */
 
 import BaseSystem from '../../core/BaseSystem.js';
+import { getCacheManager } from '../../utils/CacheManager.js';
 
 class IntelligentSequentialResolver extends BaseSystem {
+  constructor(config = null, logger = null, errorHandler = null, astParser = null, baselineManager = null, dockerSandbox = null) {
+    super(config, logger, errorHandler);
+    this.astParser = astParser;
+    this.baselineManager = baselineManager;
+    this.dockerSandbox = dockerSandbox;
+    this.useASTValidation = config?.features?.useASTValidation !== false && astParser !== null;
+    this.useBaselineComparison = config?.features?.useBaselineComparison !== false && baselineManager !== null;
+    this.useDockerValidation = config?.features?.useDockerValidation === true && dockerSandbox !== null;
+    this.cacheManager = null;
+    this.useCache = config?.features?.useCache !== false;
+  }
+
   async onInitialize() {
     this.resolutions = new Map();
     this.dependencyGraph = new Map();
     this.rollbackHistory = [];
-    this.logger?.info('IntelligentSequentialResolver inicializado');
+    
+    // Inicializar cache LRU se habilitado
+    if (this.useCache) {
+      try {
+        this.cacheManager = getCacheManager(this.config, this.logger);
+        this.logger?.debug('CacheManager cache integrado no IntelligentSequentialResolver', { cache: 'enabled' });
+      } catch (e) {
+        this.logger?.warn('Erro ao obter CacheManager, continuando sem cache', { error: e.message });
+        this.useCache = false;
+      }
+    }
+    
+    this.logger?.info('IntelligentSequentialResolver inicializado', {
+      useCache: this.useCache,
+      useASTValidation: this.useASTValidation
+    });
   }
 
   /**
@@ -69,10 +134,22 @@ class IntelligentSequentialResolver extends BaseSystem {
    * @returns {Promise<Object>} Resultado da resolução
    */
   async resolveAllErrorsWithZeroImpact(errors, codebase) {
-    // 1. Construir grafo de dependências
+    // Gerar chave de cache para este conjunto de erros
+    const cacheKey = this.generateCacheKey(errors, codebase);
+    
+    // Verificar cache se habilitado
+    if (this.useCache && this.cacheManager) {
+      const cached = this.cacheManager.get(cacheKey);
+      if (cached) {
+        this.logger?.debug('Resultado retornado do cache', { cacheKey });
+        return cached;
+      }
+    }
+
+    // 1. Construir grafo de dependências (com cache)
     const dependencyGraph = await this.buildDependencyGraph(errors, codebase);
 
-    // 2. Calcular ordem ótima
+    // 2. Calcular ordem ótima (com cache)
     const resolutionOrder = await this.calculateOptimalOrder(dependencyGraph);
 
     const results = [];
@@ -156,7 +233,7 @@ class IntelligentSequentialResolver extends BaseSystem {
     const failed = results.filter(r => r.status === 'failed' || r.status === 'error').length;
     const skipped = results.filter(r => r.status === 'skipped').length;
 
-    return {
+    const result = {
       total: errors.length,
       resolved,
       failed,
@@ -165,16 +242,46 @@ class IntelligentSequentialResolver extends BaseSystem {
       appliedFixes,
       successRate: errors.length > 0 ? (resolved / errors.length) * 100 : 0
     };
+
+    // Armazenar no cache se habilitado
+    if (this.useCache && this.cacheManager && cacheKey) {
+      this.cacheManager.set(cacheKey, result, 1800000); // Cache por 30 minutos
+    }
+
+    return result;
   }
 
   /**
-   * Constrói grafo de dependências entre erros
+   * Gera chave de cache para conjunto de erros e codebase
+   * 
+   * @param {Array<Object>} errors - Lista de erros
+   * @param {Object} codebase - Codebase
+   * @returns {string} Chave de cache
+   */
+  generateCacheKey(errors, codebase) {
+    const errorIds = errors.map(e => e.id || e.message).sort().join('|');
+    const codebaseHash = codebase.hash || JSON.stringify(codebase).substring(0, 100);
+    return `isr:${errorIds}:${codebaseHash}`;
+  }
+
+  /**
+   * Constrói grafo de dependências entre erros (com cache)
    * 
    * @param {Array<Object>} errors - Lista de erros
    * @param {Object} codebase - Codebase
    * @returns {Promise<Map>} Grafo de dependências
    */
   async buildDependencyGraph(errors, codebase) {
+    // Verificar cache se habilitado
+    if (this.useCache && this.cacheManager) {
+      const cacheKey = `depgraph:${errors.map(e => e.id).sort().join('|')}`;
+      const cached = this.cacheManager.get(cacheKey);
+      if (cached) {
+        this.logger?.debug('Grafo de dependências retornado do cache');
+        return cached;
+      }
+    }
+
     const graph = new Map();
 
     for (const error of errors) {
@@ -220,13 +327,47 @@ class IntelligentSequentialResolver extends BaseSystem {
    * @returns {boolean} True se depende
    */
   hasDependency(error1, error2, codebase) {
-    // Simplificado: verificar se arquivos estão relacionados
-    if (error1.file && error2.file) {
-      // Se erro1 está em arquivo que importa arquivo de erro2
-      const file1 = codebase.files?.[error1.file];
-      if (file1 && file1.imports) {
-        return file1.imports.some(imp => imp === error2.file);
+    if (!error1.file || !error2.file) return false;
+    
+    // Se ASTParser disponível, usar análise mais precisa
+    if (this.astParser && codebase.files?.[error1.file]?.content) {
+      try {
+        const result = this.astParser.parse(codebase.files[error1.file].content);
+        if (result.valid && result.structure && result.structure.imports) {
+           // Verificar se arquivo 1 importa arquivo 2
+           // Nota: ASTParser retorna contagem, precisaria de lista de imports para ser preciso.
+           // Se ASTParser não retorna lista, usamos fallback.
+           // Verificando ASTParser.js: analyzeStructure retorna { functions, classes, imports, exports } (contagens)
+           // Mas parse retorna 'ast'. Podemos percorrer AST aqui se necessário, ou confiar no regex de fallback se ASTParser não expõe detalhes.
+           // Melhor: se temos AST, podemos percorrer para achar imports exatos.
+           
+           let depends = false;
+           const walk = (node) => {
+             if (depends || !node) return;
+             if ((node.type === 'ImportDeclaration' || node.type === 'ExportNamedDeclaration' || node.type === 'ExportAllDeclaration') && node.source) {
+               if (node.source.value.includes(error2.file) || error2.file.includes(node.source.value)) {
+                 depends = true;
+               }
+             }
+             for (const key in node) {
+                if (node[key] && typeof node[key] === 'object') {
+                    if (Array.isArray(node[key])) node[key].forEach(walk);
+                    else if (node[key].type) walk(node[key]);
+                }
+             }
+           };
+           walk(result.ast);
+           if (depends) return true;
+        }
+      } catch (e) {
+        this.logger?.warn('Erro ao analisar dependência com AST', { error: e.message });
       }
+    }
+
+    // Fallback: verificar se arquivos estão relacionados via imports declarados no codebase object
+    const file1 = codebase.files?.[error1.file];
+    if (file1 && file1.imports) {
+      return file1.imports.some(imp => imp === error2.file || error2.file.endsWith(imp) || imp.endsWith(error2.file));
     }
 
     return false;
@@ -289,6 +430,23 @@ class IntelligentSequentialResolver extends BaseSystem {
    */
   async analyzeCascadeImpact(error, codebase, appliedFixes) {
     const impacts = [];
+    let baselineBefore = null;
+
+    // Se BaselineManager disponível, criar baseline antes da correção
+    if (this.useBaselineComparison && this.baselineManager) {
+      try {
+        baselineBefore = await this.baselineManager.execute({
+          systemName: 'IntelligentSequentialResolver',
+          options: { checkServices: false } // Não verificar serviços para performance
+        });
+        this.logger?.debug('Baseline criado antes da análise de impacto', {
+          errorId: error.id,
+          timestamp: baselineBefore.timestamp
+        });
+      } catch (e) {
+        this.logger?.warn('Erro ao criar baseline, continuando sem comparação', { error: e.message });
+      }
+    }
 
     // Analisar impacto em arquivos dependentes
     if (error.file) {
@@ -300,6 +458,26 @@ class IntelligentSequentialResolver extends BaseSystem {
           severity: 'medium',
           description: `Arquivo ${dependent} depende de ${error.file}`
         });
+      }
+
+      // Se ASTParser disponível, analisar estrutura do arquivo para detectar impacto estrutural
+      if (this.useASTValidation && this.astParser && codebase.files?.[error.file]?.content) {
+        try {
+          const astResult = this.astParser.parse(codebase.files[error.file].content);
+          if (astResult.valid && astResult.structure) {
+            // Se arquivo tem muitas dependências (exports), impacto pode ser maior
+            if (astResult.structure.exports > 5) {
+              impacts.push({
+                type: 'structural_impact',
+                file: error.file,
+                severity: 'high',
+                description: `Arquivo exporta ${astResult.structure.exports} itens, correção pode afetar múltiplos consumidores`
+              });
+            }
+          }
+        } catch (e) {
+          this.logger?.warn('Erro ao analisar estrutura com AST', { error: e.message });
+        }
       }
     }
 
@@ -318,7 +496,8 @@ class IntelligentSequentialResolver extends BaseSystem {
     return {
       impacts,
       hasHighImpact: impacts.some(i => i.severity === 'high'),
-      hasMediumImpact: impacts.some(i => i.severity === 'medium')
+      hasMediumImpact: impacts.some(i => i.severity === 'medium'),
+      baselineBefore // Incluir baseline para comparação posterior
     };
   }
 
@@ -376,7 +555,16 @@ class IntelligentSequentialResolver extends BaseSystem {
 
     // Verificar se correção é conhecida e segura
     const knownFix = this.getKnownFix(error);
-    if (!knownFix) {
+    const proposedFix = knownFix || this.generateFix(error, codebase);
+
+    // Se não há correção conhecida, ainda pode ser segura se análise estrutural passou
+    if (!knownFix && this.useASTValidation && proposedFix.analysis?.structure) {
+      // Correção gerada com análise estrutural - considerar mais segura
+      this.logger?.debug('Correção gerada com análise estrutural', {
+        errorId: error.id,
+        fixType: proposedFix.type
+      });
+    } else if (!knownFix) {
       risks.push({
         type: 'unknown_fix',
         description: 'Correção não é conhecida e testada'
@@ -386,7 +574,7 @@ class IntelligentSequentialResolver extends BaseSystem {
     return {
       isSafe: risks.length === 0,
       risks,
-      proposedFix: knownFix || this.generateFix(error)
+      proposedFix
     };
   }
 
@@ -408,17 +596,67 @@ class IntelligentSequentialResolver extends BaseSystem {
   }
 
   /**
-   * Gera correção para erro
+   * Gera correção para erro usando análise estrutural quando possível
    * 
    * @param {Object} error - Erro
+   * @param {Object} codebase - Codebase (opcional, para análise estrutural)
    * @returns {Object} Correção proposta
    */
-  generateFix(error) {
-    return {
+  generateFix(error, codebase = null) {
+    const fix = {
       type: 'generated',
       description: `Correção gerada para ${error.type}`,
-      changes: []
+      changes: [],
+      analysis: {}
     };
+
+    // Se ASTParser disponível e temos código, fazer análise estrutural
+    if (this.useASTValidation && this.astParser && error.file && codebase?.files?.[error.file]?.content) {
+      try {
+        const astResult = this.astParser.parse(codebase.files[error.file].content);
+        
+        if (!astResult.valid && astResult.errors && astResult.errors.length > 0) {
+          // Erro de sintaxe detectado - gerar correção específica
+          const syntaxError = astResult.errors[0];
+          fix.type = 'syntax_fix';
+          fix.description = `Corrigir erro de sintaxe na linha ${syntaxError.line}: ${syntaxError.message}`;
+          fix.changes.push({
+            file: error.file,
+            line: syntaxError.line,
+            column: syntaxError.column,
+            type: 'syntax',
+            message: syntaxError.message
+          });
+          fix.analysis.syntaxError = syntaxError;
+        } else if (astResult.valid) {
+          // Código válido mas erro reportado - pode ser erro semântico ou de tipo
+          fix.analysis.structure = astResult.structure;
+          fix.analysis.securityIssues = astResult.securityIssues || [];
+          
+          // Se há problemas de segurança, incluir na correção
+          if (astResult.securityIssues && astResult.securityIssues.length > 0) {
+            fix.type = 'security_fix';
+            fix.description = `Corrigir ${astResult.securityIssues.length} problema(s) de segurança`;
+            fix.changes.push(...astResult.securityIssues.map(issue => ({
+              file: error.file,
+              line: issue.line,
+              type: 'security',
+              severity: issue.severity,
+              message: issue.message
+            })));
+          }
+        }
+      } catch (e) {
+        this.logger?.warn('Erro ao analisar código com AST para gerar correção', { error: e.message });
+      }
+    }
+
+    // Se não há análise específica, usar padrão genérico
+    if (fix.changes.length === 0) {
+      fix.description = `Correção gerada para ${error.type || 'erro desconhecido'}`;
+    }
+
+    return fix;
   }
 
   /**
@@ -448,24 +686,112 @@ class IntelligentSequentialResolver extends BaseSystem {
   }
 
   /**
-   * Valida correção após aplicação
+   * Valida correção após aplicação usando ASTParser e DockerSandbox quando disponível
    * 
    * @param {Object} fixResult - Resultado da correção
    * @param {Object} codebase - Codebase
    * @returns {Promise<Object>} Resultado da validação
    */
   async validateFix(fixResult, codebase) {
-    // Validação simplificada
     const errors = [];
+    const warnings = [];
+    const validationDetails = {};
 
-    // Verificar se código ainda compila (simplificado)
+    // 1. Verificar se mudanças foram aplicadas
     if (!fixResult.changesApplied) {
       errors.push('Mudanças não foram aplicadas');
+      return {
+        success: false,
+        errors,
+        warnings,
+        validationDetails
+      };
+    }
+
+    // 2. Validação com ASTParser (se disponível)
+    if (this.useASTValidation && this.astParser && fixResult.fix?.changes) {
+      for (const change of fixResult.fix.changes) {
+        if (change.file && codebase.files?.[change.file]?.content) {
+          try {
+            const astResult = this.astParser.parse(codebase.files[change.file].content);
+            
+            if (!astResult.valid) {
+              errors.push(`Erro de sintaxe em ${change.file}: ${astResult.errors.map(e => e.message).join(', ')}`);
+              validationDetails[change.file] = {
+                valid: false,
+                astErrors: astResult.errors
+              };
+            } else {
+              validationDetails[change.file] = {
+                valid: true,
+                structure: astResult.structure,
+                securityIssues: astResult.securityIssues || []
+              };
+
+              // Avisar sobre problemas de segurança
+              if (astResult.securityIssues && astResult.securityIssues.length > 0) {
+                warnings.push(`${astResult.securityIssues.length} problema(s) de segurança detectado(s) em ${change.file}`);
+              }
+            }
+          } catch (e) {
+            this.logger?.warn('Erro ao validar arquivo com ASTParser', {
+              file: change.file,
+              error: e.message
+            });
+            warnings.push(`Não foi possível validar ${change.file} com ASTParser: ${e.message}`);
+          }
+        }
+      }
+    }
+
+    // 3. Validação com DockerSandbox (se disponível e habilitado)
+    if (this.useDockerValidation && this.dockerSandbox && fixResult.fix?.changes) {
+      for (const change of fixResult.fix.changes) {
+        if (change.file && codebase.files?.[change.file]?.content) {
+          try {
+            // Executar código em sandbox para validar que não quebra
+            const executionResult = await this.dockerSandbox.execute(
+              codebase.files[change.file].content,
+              'javascript',
+              { timeout: 5000 } // Timeout curto para validação rápida
+            );
+
+            if (!executionResult.success || executionResult.exitCode !== 0) {
+              warnings.push(`Execução de teste em sandbox falhou para ${change.file}: ${executionResult.stderr || 'erro desconhecido'}`);
+              validationDetails[change.file] = {
+                ...validationDetails[change.file],
+                sandboxTest: {
+                  success: false,
+                  stderr: executionResult.stderr,
+                  exitCode: executionResult.exitCode
+                }
+              };
+            } else {
+              validationDetails[change.file] = {
+                ...validationDetails[change.file],
+                sandboxTest: {
+                  success: true,
+                  stdout: executionResult.stdout
+                }
+              };
+            }
+          } catch (e) {
+            this.logger?.warn('Erro ao executar validação em DockerSandbox', {
+              file: change.file,
+              error: e.message
+            });
+            // Não falhar validação se DockerSandbox não disponível
+            warnings.push(`Validação em sandbox não disponível para ${change.file}`);
+          }
+        }
+      }
     }
 
     return {
       success: errors.length === 0,
-      errors
+      errors,
+      warnings,
+      validationDetails
     };
   }
 
@@ -548,7 +874,7 @@ class IntelligentSequentialResolver extends BaseSystem {
    * @returns {Array<string>} Dependências
    */
   onGetDependencies() {
-    return ['logger', 'config'];
+    return ['logger', 'config', '?ASTParser', '?BaselineManager', '?DockerSandbox'];
   }
 }
 
@@ -560,8 +886,11 @@ export default IntelligentSequentialResolver;
  * @param {Object} config - Configuração
  * @param {Object} logger - Logger
  * @param {Object} errorHandler - Error Handler
+ * @param {Object} astParser - AST Parser (opcional)
+ * @param {Object} baselineManager - Baseline Manager (opcional)
+ * @param {Object} dockerSandbox - Docker Sandbox (opcional)
  * @returns {IntelligentSequentialResolver} Instância do IntelligentSequentialResolver
  */
-export function createIntelligentSequentialResolver(config = null, logger = null, errorHandler = null) {
-  return new IntelligentSequentialResolver(config, logger, errorHandler);
+export function createIntelligentSequentialResolver(config = null, logger = null, errorHandler = null, astParser = null, baselineManager = null, dockerSandbox = null) {
+  return new IntelligentSequentialResolver(config, logger, errorHandler, astParser, baselineManager, dockerSandbox);
 }

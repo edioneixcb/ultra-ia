@@ -129,6 +129,19 @@ class ConfigLoader {
       envConfig.paths.logs = process.env.LOGS_PATH;
     }
 
+    // API Auth - permite habilitar autenticação via env (para produção)
+    if (process.env.API_AUTH_ENABLED) {
+      envConfig.api = envConfig.api || {};
+      envConfig.api.auth = envConfig.api.auth || {};
+      envConfig.api.auth.enabled = process.env.API_AUTH_ENABLED === 'true';
+    }
+
+    if (process.env.API_KEY) {
+      envConfig.api = envConfig.api || {};
+      envConfig.api.auth = envConfig.api.auth || {};
+      envConfig.api.auth.apiKey = process.env.API_KEY;
+    }
+
     return envConfig;
   }
 
@@ -364,11 +377,13 @@ class ConfigLoader {
   }
 }
 
-// Singleton instance
+// Singleton instance with initialization lock
 let instance = null;
+let initializationPromise = null;
 
 /**
  * Obtém instância singleton do ConfigLoader
+ * Thread-safe: previne criação dupla durante inicialização concorrente
  * @returns {ConfigLoader} Instância do ConfigLoader
  */
 export function getConfigLoader() {
