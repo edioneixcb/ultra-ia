@@ -92,11 +92,12 @@ export function validate(schema, data) {
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
+      const issues = error.issues || error.errors || [];
       return {
         success: false,
         data: null,
-        errors: error.errors.map(err => ({
-          path: err.path.join('.'),
+        errors: issues.map(err => ({
+          path: err.path?.join('.') || '',
           message: err.message,
           code: err.code
         }))
