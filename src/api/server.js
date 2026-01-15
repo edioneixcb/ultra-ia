@@ -12,7 +12,6 @@
 
 import express from 'express';
 import cors from 'cors';
-import bodyParser from 'body-parser';
 import rateLimit from 'express-rate-limit';
 import { getUltraSystem } from '../systems/UltraSystem.js';
 import { loadConfig } from '../utils/ConfigLoader.js';
@@ -69,8 +68,8 @@ const generateLimiter = rateLimit({
 // Middleware
 app.use(cors());
 app.use(CorrelationId.middleware());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static('src/public'));
 
 // Middleware de métricas

@@ -92,11 +92,23 @@ export function validate(schema, data) {
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
+      const issues = Array.isArray(error.issues) ? error.issues : [];
+      if (issues.length === 0) {
+        return {
+          success: false,
+          data: null,
+          errors: [{
+            path: '',
+            message: error.message || 'Erro de validação (Zod)',
+            code: 'ZOD_ERROR'
+          }]
+        };
+      }
       return {
         success: false,
         data: null,
-        errors: error.errors.map(err => ({
-          path: err.path.join('.'),
+        errors: issues.map(err => ({
+          path: err.path?.join('.') || '',
           message: err.message,
           code: err.code
         }))
