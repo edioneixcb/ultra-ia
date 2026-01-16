@@ -942,8 +942,8 @@ class KnowledgeBaseExporter {
 
 ## 📚 REFERÊNCIAS
 
-- `docs/FASE7_FASE8_COMPLETA.md` - Estado atual das Fases 7 e 8
-- `docs/AUDITORIA_COMPLETA_REQUISITOS.md` - Requisitos e lacunas
+- `docs/Arquivados/fases/FASE7_FASE8_COMPLETA.md` - Estado atual das Fases 7 e 8
+- `docs/Arquivados/relatorios/AUDITORIA_COMPLETA_REQUISITOS.md` - Requisitos e lacunas
 - `docs/status/STATUS_IMPLEMENTACAO.md` - Status de implementação
 - `estilos/ESTILO_IASUPER.md` - Guia de estilo e padrões
 

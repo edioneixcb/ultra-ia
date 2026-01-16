@@ -27,7 +27,7 @@ Esta declaração é baseada em:
 ### 1. REQUISITOS E FUNCIONALIDADES
 
 #### 1.1 Requisitos Atendidos (Evidências)
-**Fonte:** `docs/AUDITORIA_COMPLETA_REQUISITOS.md:502-509`, `docs/PLANO_IMPLEMENTACAO_PROXIMOS_PASSOS.md:11-54`
+**Fonte:** `docs/Arquivados/relatorios/AUDITORIA_COMPLETA_REQUISITOS.md:502-509`, `docs/PLANO_IMPLEMENTACAO_PROXIMOS_PASSOS.md:11-54`
 
 ✅ **Geração de código com LLM local**
 - **Evidência:** `src/components/HallucinationPreventionGenerator.js` implementa integração com Ollama
@@ -65,7 +65,7 @@ Esta declaração é baseada em:
 - **Status:** Implementados
 
 #### 1.2 Requisitos Parcialmente Atendidos (Evidências)
-**Fonte:** `docs/AUDITORIA_COMPLETA_REQUISITOS.md:511-514`
+**Fonte:** `docs/Arquivados/relatorios/AUDITORIA_COMPLETA_REQUISITOS.md:511-514`
 
 ⚠️ **Sandbox isolado**
 - **Evidência:** `src/utils/DockerSandbox.js` existe mas precisa melhorias
@@ -83,7 +83,7 @@ Esta declaração é baseada em:
 - **Configuração:** `config/config.json:59-61`
 
 #### 1.3 Requisitos Não Atendidos (Evidências)
-**Fonte:** `docs/AUDITORIA_COMPLETA_REQUISITOS.md:516-521`, `docs/PLANO_IMPLEMENTACAO_PROXIMOS_PASSOS.md:62-69`
+**Fonte:** `docs/Arquivados/relatorios/AUDITORIA_COMPLETA_REQUISITOS.md:516-521`, `docs/PLANO_IMPLEMENTACAO_PROXIMOS_PASSOS.md:62-69`
 
 ❌ **Execução em Docker isolado**
 - **Evidência:** `src/utils/DockerSandbox.js` existe mas não garante isolamento completo
@@ -163,7 +163,7 @@ Esta declaração é baseada em:
 - `config.features.useDockerSandbox` - Usado em sistemas que precisam de execução isolada
 
 #### 2.2 Efeitos Colaterais Identificados (Evidências)
-**Fonte:** Análise de código, `docs/baseline-fase7-8.md`
+**Fonte:** Análise de código, `docs/Arquivados/fases/baseline-fase7-8.md`
 
 1. **DatabaseManager Singleton** (`src/utils/DatabaseManager.js:235-245`)
    - **Risco:** Race condition na inicialização
@@ -402,7 +402,7 @@ CREATE TABLE compressed_context (id, session_id, summary, original_count, compre
 - **Exemplo:** `src/systems/fase2/IntelligentSequentialResolver.js` verifica `this.useASTValidation` antes de usar ASTParser
 
 #### 6.3 Test Failures Identificados (Evidências)
-**Fonte:** `docs/baseline-fase7-8.md:6-36`
+**Fonte:** `docs/Arquivados/fases/baseline-fase7-8.md:6-36`
 
 **56 Testes Falhando:**
 1. **ESLint Configuration** (1 teste)
@@ -430,7 +430,7 @@ CREATE TABLE compressed_context (id, session_id, summary, original_count, compre
 ### 7. TESTES E QUALIDADE
 
 #### 7.1 Cobertura de Testes (Evidências)
-**Fonte:** `docs/baseline-fase7-8.md:5-10`, `docs/RESUMO_IMPLEMENTACAO_FASE7_FASE8.md:81-84`
+**Fonte:** `docs/Arquivados/fases/baseline-fase7-8.md:5-10`, `docs/Arquivados/fases/RESUMO_IMPLEMENTACAO_FASE7_FASE8.md:81-84`
 
 **Estatísticas:**
 - **Total:** 908 testes
@@ -439,7 +439,7 @@ CREATE TABLE compressed_context (id, session_id, summary, original_count, compre
 - **Tempo de Execução:** ~14s
 
 **Cobertura por Fase:**
-- **Fase 2:** 86 testes unitários mencionados em `docs/RESUMO_IMPLEMENTACAO_FASE7_FASE8.md:84`
+- **Fase 2:** 86 testes unitários mencionados em `docs/Arquivados/fases/RESUMO_IMPLEMENTACAO_FASE7_FASE8.md:84`
 - **Fase 3:** Testes implementados mas não quantificados
 - **Integração:** 5+ testes de integração mencionados
 
@@ -526,10 +526,10 @@ CREATE TABLE compressed_context (id, session_id, summary, original_count, compre
 
 **Documentos Identificados:**
 - `docs/PLANO_IMPLEMENTACAO_PROXIMOS_PASSOS.md` - Plano anterior
-- `docs/AUDITORIA_COMPLETA_REQUISITOS.md` - Requisitos e lacunas
-- `docs/baseline-fase7-8.md` - Baseline de testes
-- `docs/RESUMO_IMPLEMENTACAO_FASE7_FASE8.md` - Resumo de implementação
-- `docs/FASE7_FASE8_COMPLETA.md` - Documentação de fases
+- `docs/Arquivados/relatorios/AUDITORIA_COMPLETA_REQUISITOS.md` - Requisitos e lacunas
+- `docs/Arquivados/fases/baseline-fase7-8.md` - Baseline de testes
+- `docs/Arquivados/fases/RESUMO_IMPLEMENTACAO_FASE7_FASE8.md` - Resumo de implementação
+- `docs/Arquivados/fases/FASE7_FASE8_COMPLETA.md` - Documentação de fases
 - `docs/fases/FASE0_COMPLETA.md` até `FASE3_COMPLETA.md` - Documentação por fase
 - `docs/core/INTEGRACAO_FASE_PRE_REQUISITO.md` - Documentação de infraestrutura
 
@@ -647,31 +647,31 @@ CREATE TABLE compressed_context (id, session_id, summary, original_count, compre
 #### 11.2: Correção de Testes Falhando
 
 **11.2.1: ESLint v9 Migration** 🔴 CRÍTICO
-- **Evidência:** `docs/baseline-fase7-8.md:14-17`
+- **Evidência:** `docs/Arquivados/fases/baseline-fase7-8.md:14-17`
 - **Arquivo:** `src/validation/ESLintValidator.js`
 - **Solução:** Remover `useEslintrc`, migrar para formato plano
 - **Critérios:** Todos os testes de ESLint passando
 
 **11.2.2: Logger Case Mismatch** 🔴 CRÍTICO
-- **Evidência:** `docs/baseline-fase7-8.md:19-22`
+- **Evidência:** `docs/Arquivados/fases/baseline-fase7-8.md:19-22`
 - **Arquivo:** `src/utils/Logger.js`
 - **Solução:** Padronizar case de níveis de log
 - **Critérios:** Todos os testes de Logger passando
 
 **11.2.3: PersistentContextManager Logic** 🔴 CRÍTICO
-- **Evidência:** `docs/baseline-fase7-8.md:24-26`
+- **Evidência:** `docs/Arquivados/fases/baseline-fase7-8.md:24-26`
 - **Arquivo:** `src/components/PersistentContextManager.js`
 - **Solução:** Corrigir lógica em `getContext` e `getFormattedContext`
 - **Critérios:** Todos os testes de contexto passando
 
 **11.2.4: Fase 0 Test Imports** 🔴 CRÍTICO
-- **Evidência:** `docs/baseline-fase7-8.md:28-31`
+- **Evidência:** `docs/Arquivados/fases/baseline-fase7-8.md:28-31`
 - **Arquivos:** Testes da Fase 0
 - **Solução:** Corrigir imports/exportações
 - **Critérios:** Todos os testes da Fase 0 passando
 
 **11.2.5: UltraSystem ErrorHandler** 🔴 CRÍTICO
-- **Evidência:** `docs/baseline-fase7-8.md:33-36`
+- **Evidência:** `docs/Arquivados/fases/baseline-fase7-8.md:33-36`
 - **Arquivo:** `src/systems/UltraSystem.js`
 - **Solução:** Garantir injeção correta de ErrorHandler
 - **Critérios:** Todos os testes de integração passando
@@ -948,9 +948,9 @@ CREATE TABLE compressed_context (id, session_id, summary, original_count, compre
 ### Documentos Consultados
 - `estilos/ESTILO_IASUPER.md` - Protocolo ativado
 - `docs/PLANO_IMPLEMENTACAO_PROXIMOS_PASSOS.md` - Plano anterior
-- `docs/AUDITORIA_COMPLETA_REQUISITOS.md` - Requisitos e lacunas
-- `docs/baseline-fase7-8.md` - Baseline de testes
-- `docs/RESUMO_IMPLEMENTACAO_FASE7_FASE8.md` - Resumo de implementação
+- `docs/Arquivados/relatorios/AUDITORIA_COMPLETA_REQUISITOS.md` - Requisitos e lacunas
+- `docs/Arquivados/fases/baseline-fase7-8.md` - Baseline de testes
+- `docs/Arquivados/fases/RESUMO_IMPLEMENTACAO_FASE7_FASE8.md` - Resumo de implementação
 
 ### Arquivos Analisados
 - `src/core/BaseSystem.js` - Contrato base
