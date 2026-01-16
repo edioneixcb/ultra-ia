@@ -315,14 +315,14 @@ Todas as interfaces estao documentadas em [docs/contracts/](./contracts/) com:
 Interfaces principais:
 - [IFileSystem](./contracts/IFileSystem.ts)
 - [ITerminal](./contracts/ITerminal.ts)
+- [IProcess](./contracts/IProcess.ts)
+- [ISearch](./contracts/ISearch.ts)
+- [IGit](./contracts/IGit.ts)
+- [IBrowser](./contracts/IBrowser.ts)
+- [IStorage](./contracts/IStorage.ts)
+- [CommandRegistry](./contracts/CommandRegistry.ts)
+- [EventBus](./contracts/EventBus.ts)
 - [PluginAPI](./contracts/PluginAPI.ts)
-- IProcess (a documentar)
-- ISearch (a documentar)
-- IGit (a documentar)
-- IBrowser (a documentar)
-- IStorage (a documentar)
-- CommandRegistry (a documentar)
-- EventBus (a documentar)
 
 ---
 
@@ -332,6 +332,13 @@ Padroes documentados em [docs/patterns/](./patterns/):
 - [commands.md](./patterns/commands.md) - Como adicionar comandos
 - [error-handling.md](./patterns/error-handling.md) - Como tratar erros
 - [component-creation.md](./patterns/component-creation.md) - Como criar componentes
+- [adapter-creation.md](./patterns/adapter-creation.md) - Como criar adapters
+- [store-creation.md](./patterns/store-creation.md) - Como criar stores
+- [event-registration.md](./patterns/event-registration.md) - Como registrar eventos
+- [async-request.md](./patterns/async-request.md) - Como fazer requisicoes async
+- [persistence.md](./patterns/persistence.md) - Como persistir estado
+- [module-communication.md](./patterns/module-communication.md) - Comunicacao entre modulos
+- [plugin-creation.md](./patterns/plugin-creation.md) - Criar plugin
 
 Anti-padroes documentados nos mesmos arquivos:
 - Acessar DOM fora de UI layer
@@ -351,6 +358,8 @@ Templates copiaveis em [docs/templates/](./templates/):
 - [plugin.md](./templates/plugin.md) - Template de plugin
 - [store.md](./templates/store.md) - Template de store Zustand
 - [command.md](./templates/command.md) - Template de comando
+- [test-unit.md](./templates/test-unit.md) - Template de teste unitario
+- [test-e2e.md](./templates/test-e2e.md) - Template de teste E2E
 
 ---
 
@@ -360,11 +369,11 @@ Guias passo-a-passo em [docs/guides/](./guides/):
 - [add-language.md](./guides/add-language.md) - Adicionar suporte a nova linguagem (LSP)
 - [create-plugin.md](./guides/create-plugin.md) - Criar plugin completo do zero
 - [add-ai-provider.md](./guides/add-ai-provider.md) - Adicionar novo provedor de IA
-- add-debugger.md - Adicionar debugger para nova linguagem (DAP) (a documentar)
-- add-view.md - Adicionar novo tipo de view/panel (a documentar)
-- add-command.md - Adicionar novo comando com keybinding (a documentar)
-- add-config.md - Adicionar configuracao persistente (a documentar)
-- add-snippets.md - Adicionar snippets para linguagem (a documentar)
+- [add-debugger.md](./guides/add-debugger.md) - Adicionar debugger para nova linguagem (DAP)
+- [add-view.md](./guides/add-view.md) - Adicionar novo tipo de view/panel
+- [add-command.md](./guides/add-command.md) - Adicionar novo comando com keybinding
+- [add-config.md](./guides/add-config.md) - Adicionar configuracao persistente
+- [add-snippets.md](./guides/add-snippets.md) - Adicionar snippets para linguagem
 
 ---
 
@@ -402,6 +411,66 @@ Guias passo-a-passo em [docs/guides/](./guides/):
 - [ ] Types passou?
 - [ ] Testes passaram?
 - [ ] Build passou?
+
+---
+
+### CHECKLIST: Criar Plugin
+
+#### Antes
+- [ ] Plugin necessario e aprovado?
+- [ ] Permissoes minimas definidas?
+- [ ] API version compatível?
+
+#### Durante
+- [ ] Manifest valido
+- [ ] Activation events definidos
+- [ ] Comandos registrados
+- [ ] UI registrada (se aplicavel)
+- [ ] Cleanup em deactivate
+
+#### Testes
+- [ ] Testes basicos de ativacao
+- [ ] Teste de permissao
+
+---
+
+### CHECKLIST: Adicionar Dependencia
+
+- [ ] Passa nos criterios de dependencia (Secao 2)
+- [ ] Licenca compativel
+- [ ] Bundle size aceitavel
+- [ ] Sem vulnerabilidades criticas
+- [ ] Documentacao atualizada
+
+---
+
+### CHECKLIST: Fazer Release
+
+- [ ] Versao atualizada (semver)
+- [ ] Changelog atualizado
+- [ ] Tests e build passaram
+- [ ] Documentacao atualizada
+- [ ] Tag criada no git
+
+---
+
+### CHECKLIST: Revisar PR
+
+- [ ] Codigo segue padroes
+- [ ] Sem regressao aparente
+- [ ] Testes adicionados/atualizados
+- [ ] Documentacao atualizada
+- [ ] Mudanca justificada nos ADRs (se necessario)
+
+---
+
+### CHECKLIST: Resolver Bug
+
+- [ ] Reproduziu o problema
+- [ ] Identificou causa raiz
+- [ ] Corrigiu com test
+- [ ] Teste falha antes e passa depois
+- [ ] Documentacao atualizada se necessario
 
 ---
 
@@ -453,11 +522,11 @@ Problemas comuns documentados em [docs/troubleshooting/](./troubleshooting/):
 - [lsp.md](./troubleshooting/lsp.md) - Problemas com LSP
 - [dap.md](./troubleshooting/dap.md) - Problemas com DAP
 - [plugins.md](./troubleshooting/plugins.md) - Problemas com plugins
-- terminal.md - Problemas com terminal (a documentar)
-- collaboration.md - Problemas com colaboracao (a documentar)
-- performance.md - Problemas de performance (a documentar)
-- build.md - Problemas de build (a documentar)
-- tests.md - Problemas com testes (a documentar)
+- [terminal.md](./troubleshooting/terminal.md) - Problemas com terminal
+- [collaboration.md](./troubleshooting/collaboration.md) - Problemas com colaboracao
+- [performance.md](./troubleshooting/performance.md) - Problemas de performance
+- [build.md](./troubleshooting/build.md) - Problemas de build
+- [tests.md](./troubleshooting/tests.md) - Problemas com testes
 
 ---
 
@@ -523,9 +592,34 @@ Aguardando decisao
 
 ---
 
+## SECAO 13: GLOSSARIO
+
+Termos e definicoes em [GLOSSARIO.md](./GLOSSARIO.md).
+
+---
+
+## SECAO 14: META (Como usar e atualizar este documento)
+
+### Como usar
+
+1. Leia a Secao 0 para contexto rapido
+2. Consulte Principios e Criterios antes de decidir algo
+3. Use Templates e Guias para implementar
+4. Valide com Checklists antes de finalizar
+
+### Como atualizar
+
+- Toda mudanca arquitetural deve gerar um ADR
+- Mudancas de API exigem atualizar contratos e exemplos
+- Mudancas de processo exigem atualizar checklists
+- Atualize o changelog ao modificar este documento
+
+---
+
 ## REFERENCIAS
 
 - [README da Documentacao](./README.md) - Visao geral da estrutura
+- [Glossario](./GLOSSARIO.md) - Termos e definicoes
 - [Contratos de Interface](./contracts/) - Interfaces TypeScript documentadas
 - [Templates](./templates/) - Templates copiaveis
 - [Padroes](./patterns/) - Padroes e anti-padroes

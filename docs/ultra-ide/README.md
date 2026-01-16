@@ -7,6 +7,7 @@
 ## Estrutura
 
 - **[ULTRA-IDE-MASTER-SPEC.md](./ULTRA-IDE-MASTER-SPEC.md)** - Documento master completo
+- **[GLOSSARIO.md](./GLOSSARIO.md)** - Termos e definicoes
 - **[contracts/](./contracts/)** - Contratos de interface (TypeScript)
 - **[templates/](./templates/)** - Templates para desenvolvimento futuro
 - **[patterns/](./patterns/)** - Padroes de codigo
