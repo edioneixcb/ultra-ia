@@ -12,6 +12,7 @@
 import Docker from 'dockerode';
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
+import { PassThrough } from 'stream';
 import { getConfigLoader } from './ConfigLoader.js';
 import { getLogger } from './Logger.js';
 import { getErrorHandler } from './ErrorHandler.js';
@@ -250,10 +251,34 @@ class DockerSandbox {
           const logs = await container.logs({
             stdout: true,
             stderr: true,
-            timestamps: false
+            timestamps: false,
+            follow: false
           });
-          const logOutput = logs.toString('utf-8');
-          stdout += logOutput;
+
+          if (logs) {
+            const stdoutStream = new PassThrough();
+            const stderrStream = new PassThrough();
+
+            stdoutStream.on('data', (chunk) => {
+              stdout += chunk.toString('utf-8');
+            });
+
+            stderrStream.on('data', (chunk) => {
+              stderr += chunk.toString('utf-8');
+            });
+
+            if (typeof logs.pipe === 'function' && this.docker?.modem?.demuxStream) {
+              this.docker.modem.demuxStream(logs, stdoutStream, stderrStream);
+              await new Promise((resolve) => logs.on('end', resolve));
+            } else if (this.docker?.modem?.demuxStream) {
+              const logStream = new PassThrough();
+              this.docker.modem.demuxStream(logStream, stdoutStream, stderrStream);
+              logStream.end(logs);
+            } else {
+              const logOutput = logs.toString('utf-8');
+              stdout += logOutput;
+            }
+          }
         } catch (logError) {
           // Ignorar erro de logs
         }

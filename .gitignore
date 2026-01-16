@@ -39,6 +39,9 @@ tmp/
 temp/
 *.tmp
 
+# Backups
+backups/
+
 # Database files (manter estrutura mas não dados sensíveis)
 # data/knowledge-base/*.db
 # data/context/*.db

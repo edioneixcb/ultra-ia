@@ -26,6 +26,10 @@ import { dirname, join } from 'path';
 import { getUltraSystem } from '../systems/UltraSystem.js';
 import { loadConfig } from '../utils/ConfigLoader.js';
 import { getLogger } from '../utils/Logger.js';
+import { getInterceptorLayer } from '../proactive/InterceptorLayer.js';
+import { getCognitiveContextEngine } from '../cognitive/CognitiveContextEngine.js';
+import { getAgentMemoryBridge } from '../memory/AgentMemoryBridge.js';
+import { getMutationSelfHealing } from '../healing/MutationSelfHealing.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -51,6 +55,10 @@ class UltraMCPServer {
       }
     );
 
+    this.interceptorLayer = getInterceptorLayer(config, logger);
+    this.cognitiveEngine = getCognitiveContextEngine(config, logger);
+    this.memoryBridge = getAgentMemoryBridge(config, logger);
+    this.selfHealer = getMutationSelfHealing(config, logger);
     this.setupHandlers();
   }
 
@@ -211,6 +219,84 @@ class UltraMCPServer {
               properties: {},
             },
           },
+          {
+            name: 'ultra_analyze_impact',
+            description: 'Analisa impacto de mudança em arquivo específico',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                filePath: {
+                  type: 'string',
+                  description: 'Caminho do arquivo modificado'
+                },
+                depth: {
+                  type: 'number',
+                  description: 'Profundidade de análise (1-5)',
+                  default: 3
+                }
+              },
+              required: ['filePath']
+            }
+          },
+          {
+            name: 'ultra_get_agent_memory',
+            description: 'Recupera memórias de um agente específico',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                agentName: {
+                  type: 'string',
+                  description: 'Nome do agente'
+                },
+                memoryType: {
+                  type: 'string',
+                  description: 'Tipo da memória (decision, error, success, pattern)'
+                }
+              },
+              required: ['agentName']
+            }
+          },
+          {
+            name: 'ultra_run_guardians',
+            description: 'Executa guardiões preditivos em código',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                code: {
+                  type: 'string',
+                  description: 'Código a analisar'
+                },
+                runDependencyScan: {
+                  type: 'boolean',
+                  description: 'Executar scan de dependências',
+                  default: false
+                }
+              },
+              required: ['code']
+            }
+          },
+          {
+            name: 'ultra_self_heal',
+            description: 'Tenta auto-corrigir código com erros',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                code: {
+                  type: 'string',
+                  description: 'Código com erro'
+                },
+                error: {
+                  type: 'string',
+                  description: 'Mensagem de erro'
+                },
+                maxMutations: {
+                  type: 'number',
+                  default: 5
+                }
+              },
+              required: ['code', 'error']
+            }
+          },
         ],
       };
     });
@@ -220,6 +306,18 @@ class UltraMCPServer {
       const { name, arguments: args } = request.params;
 
       try {
+        const interception = await this.interceptorLayer.analyze(name, args);
+        if (interception.blocked) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: interception.reason || 'Bloqueado por interceptação'
+              }
+            ],
+            isError: true
+          };
+        }
         let result;
 
         switch (name) {
@@ -246,6 +344,18 @@ class UltraMCPServer {
             break;
           case 'ultra_get_stats':
             result = await this.getStats(args);
+            break;
+          case 'ultra_analyze_impact':
+            result = await this.analyzeImpact(args);
+            break;
+          case 'ultra_get_agent_memory':
+            result = await this.getAgentMemory(args);
+            break;
+          case 'ultra_run_guardians':
+            result = await this.runGuardians(args);
+            break;
+          case 'ultra_self_heal':
+            result = await this.selfHeal(args);
             break;
           default:
             throw new Error(`Ferramenta desconhecida: ${name}`);
@@ -453,6 +563,58 @@ class UltraMCPServer {
            `  - Total: ${stats.execution.total}\n` +
            `  - Taxa de Sucesso: ${stats.execution.successRate.toFixed(1)}%\n` +
            `  - Duração Média: ${stats.execution.averageDuration?.toFixed(0) || 0}ms`;
+  }
+
+  /**
+   * Analisa impacto de arquivo
+   */
+  async analyzeImpact(args) {
+    const { filePath, depth = 3 } = args;
+    const result = this.cognitiveEngine.analyzeImpact(filePath, depth);
+    return `Impacto analisado:\n\n` +
+           `Arquivo: ${filePath}\n` +
+           `Profundidade: ${depth}\n` +
+           `Arquivos impactados: ${result.impactedFiles.length}\n` +
+           `${result.impactedFiles.map(f => `- ${f}`).join('\n')}`;
+  }
+
+  /**
+   * Recupera memória de agente
+   */
+  async getAgentMemory(args) {
+    const { agentName, memoryType = null } = args;
+    const memories = this.memoryBridge.recall(agentName, memoryType, 10);
+    return `Memórias de ${agentName}:\n\n` +
+           `Total: ${memories.length}\n` +
+           memories.map((m, i) => `${i + 1}. [${m.memoryType}] ${m.content}`).join('\n');
+  }
+
+  /**
+   * Executa guardiões preditivos
+   */
+  async runGuardians(args) {
+    const { code, runDependencyScan = false } = args;
+    const validation = await ultraSystem.validator.validate(code, {
+      layers: ['guardians'],
+      runDependencyScan
+    });
+    return `Guardiões executados:\n\n` +
+           `Válido: ${validation.valid ? '✅' : '❌'}\n` +
+           `Score: ${validation.score}/100\n` +
+           `${validation.errors.length ? `Erros: ${validation.errors.join('; ')}\n` : ''}` +
+           `${validation.warnings.length ? `Avisos: ${validation.warnings.join('; ')}\n` : ''}`;
+  }
+
+  /**
+   * Tenta auto-correção via self-healing
+   */
+  async selfHeal(args) {
+    const { code, error, maxMutations = 5 } = args;
+    const result = await this.selfHealer.heal(code, error, { maxMutations });
+    if (!result.success) {
+      return `Self-healing falhou após ${result.attempts} tentativas.`;
+    }
+    return `Self-healing bem-sucedido:\n\n\`\`\`javascript\n${result.code}\n\`\`\``;
   }
 
   async run() {

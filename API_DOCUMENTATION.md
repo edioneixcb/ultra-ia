@@ -5,6 +5,12 @@
 http://localhost:3000
 ```
 
+## Autenticação (Opcional)
+
+Quando `api.auth.enabled` está ativo, a API exige credenciais:
+- API Key: header `X-API-Key`
+- JWT: header `Authorization: Bearer <token>` assinado com `api.auth.jwtSecret`
+
 ## Endpoints
 
 ### POST /api/generate
@@ -54,11 +60,8 @@ Gera código baseado em um prompt.
 ```json
 {
   "success": false,
-  "error": {
-    "type": "string",
-    "message": "string",
-    "suggestions": ["string"]
-  }
+  "error": "Erro ao gerar código",
+  "message": "Detalhes do erro"
 }
 ```
 
@@ -74,6 +77,45 @@ curl -X POST http://localhost:3000/api/generate \
 
 ---
 
+### POST /api/validate
+Valida código existente.
+
+**Request Body:**
+```json
+{
+  "code": "function test() { return 1; }",
+  "language": "javascript"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "validation": {
+    "valid": true,
+    "issues": [
+      { "type": "warning", "message": "Indentação inconsistente detectada" }
+    ],
+    "errorCount": 0,
+    "warningCount": 1,
+    "score": 90
+  }
+}
+```
+
+**Exemplo:**
+```bash
+curl -X POST http://localhost:3000/api/validate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "function test() { return 1; }",
+    "language": "javascript"
+  }'
+```
+
+---
+
 ### GET /api/health
 Verifica status de saúde do sistema.
 
@@ -82,6 +124,15 @@ Verifica status de saúde do sistema.
 {
   "status": "healthy",
   "timestamp": "2025-01-09T12:00:00.000Z",
+  "config": {
+    "valid": true,
+    "errors": [],
+    "warnings": []
+  },
+  "ollama": {
+    "available": true,
+    "models": ["deepseek-coder:6.7b", "llama3.1:8b"]
+  },
   "components": {
     "knowledgeBase": true,
     "context": true,
@@ -201,6 +252,39 @@ curl -X POST http://localhost:3000/api/index \
 
 ---
 
+### GET /api/search
+Busca na knowledge base.
+
+**Query Parameters:**
+| Parâmetro | Tipo | Descrição |
+|-----------|------|-----------|
+| q | string | Texto de busca |
+| limit | number | Limite de resultados (padrão: 10) |
+
+**Response:**
+```json
+{
+  "success": true,
+  "results": [
+    {
+      "type": "function",
+      "name": "calculateTotal",
+      "file": "src/utils/math.js",
+      "language": "javascript",
+      "similarity": 0.92
+    }
+  ],
+  "count": 1
+}
+```
+
+**Exemplo:**
+```bash
+curl "http://localhost:3000/api/search?q=calculate&limit=5"
+```
+
+---
+
 ### GET /api/history/:sessionId
 Obtém histórico de execuções de uma sessão.
 
@@ -209,6 +293,18 @@ Obtém histórico de execuções de uma sessão.
 {
   "success": true,
   "sessionId": "default",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Criar função fatorial",
+      "timestamp": "2025-01-09T12:00:00.000Z"
+    },
+    {
+      "role": "assistant",
+      "content": "function factorial(n) {...}",
+      "timestamp": "2025-01-09T12:00:01.000Z"
+    }
+  ],
   "history": [
     {
       "success": true,
@@ -231,6 +327,44 @@ Obtém histórico de execuções de uma sessão.
 **Exemplo:**
 ```bash
 curl http://localhost:3000/api/history/default
+```
+
+---
+
+### GET /api/metrics
+Retorna métricas do sistema em formato JSON.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "counters": {
+      "totalRequests": 1234,
+      "totalErrors": 5,
+      "startTime": 1705000000000
+    },
+    "requests": {},
+    "errors": {},
+    "system": {
+      "memory": { "usagePercent": 45 },
+      "cpu": { "loadAvg": [0.5, 0.6, 0.7] }
+    }
+  },
+  "timestamp": "2026-01-14T17:00:00.000Z"
+}
+```
+
+---
+
+### GET /api/metrics/prometheus
+Retorna métricas em formato Prometheus.
+
+**Response:**
+```text
+# HELP http_requests_total Total de requisições HTTP
+# TYPE http_requests_total counter
+http_requests_total{method="POST",endpoint="/api/generate"} 100
 ```
 
 ---

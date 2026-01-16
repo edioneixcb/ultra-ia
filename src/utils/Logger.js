@@ -8,7 +8,7 @@
  * - Separação de logs de erro
  */
 
-import { createWriteStream, existsSync, mkdirSync, writeFileSync } from 'fs';
+import { appendFileSync, existsSync, mkdirSync, renameSync, statSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -75,13 +75,80 @@ class StructuredLogger {
 
     // Escrever em arquivo principal (modo síncrono para garantir existência imediata)
     const systemFile = this.getLogFile('system');
-    writeFileSync(systemFile, logLine, { flag: 'w' });
+    this.rotateIfNeeded(systemFile);
+    appendFileSync(systemFile, logLine);
 
     // Se erro, também escrever em arquivo de erros
     if (isError) {
       const errorFile = this.getLogFile('error');
-      writeFileSync(errorFile, logLine, { flag: 'w' });
+      this.rotateIfNeeded(errorFile);
+      appendFileSync(errorFile, logLine);
     }
+  }
+
+  /**
+   * Rotaciona arquivo de log quando excede tamanho máximo
+   * @param {string} filePath - Caminho do arquivo
+   */
+  rotateIfNeeded(filePath) {
+    if (!this.rotation?.enabled) {
+      return;
+    }
+
+    const maxSizeBytes = this.parseSize(this.rotation.maxSize || '10MB');
+    if (!maxSizeBytes || !existsSync(filePath)) {
+      return;
+    }
+
+    try {
+      const { size } = statSync(filePath);
+      if (size < maxSizeBytes) {
+        return;
+      }
+
+      const maxFiles = this.rotation.maxFiles || 10;
+      for (let i = maxFiles - 1; i >= 1; i--) {
+        const rotated = `${filePath}.${i}`;
+        if (existsSync(rotated)) {
+          if (i === maxFiles - 1) {
+            unlinkSync(rotated);
+          } else {
+            renameSync(rotated, `${filePath}.${i + 1}`);
+          }
+        }
+      }
+
+      renameSync(filePath, `${filePath}.1`);
+    } catch (error) {
+      // Falha de rotação não deve quebrar o fluxo de logs
+    }
+  }
+
+  /**
+   * Converte tamanho em bytes a partir de string (ex: 10MB)
+   * @param {string|number} size - Tamanho em formato humano ou número
+   * @returns {number} Tamanho em bytes
+   */
+  parseSize(size) {
+    if (typeof size === 'number') {
+      return size;
+    }
+
+    const match = String(size).trim().match(/^(\d+(?:\.\d+)?)(kb|mb|gb)?$/i);
+    if (!match) {
+      return 0;
+    }
+
+    const value = parseFloat(match[1]);
+    const unit = (match[2] || 'b').toLowerCase();
+    const multipliers = {
+      b: 1,
+      kb: 1024,
+      mb: 1024 * 1024,
+      gb: 1024 * 1024 * 1024
+    };
+
+    return Math.floor(value * (multipliers[unit] || 1));
   }
 
   /**

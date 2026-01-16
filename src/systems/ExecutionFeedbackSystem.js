@@ -261,7 +261,7 @@ class ExecutionFeedbackSystem {
     }
 
     return new Promise((resolve, reject) => {
-      const process = spawn(command, args, {
+      const childProcess = spawn(command, args, {
         cwd: this.sandboxBasePath,
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { ...process.env, NODE_ENV: 'production' }
@@ -274,29 +274,29 @@ class ExecutionFeedbackSystem {
       // Configurar timeout
       if (timeout > 0) {
         timeoutId = setTimeout(() => {
-          process.kill('SIGTERM');
+          childProcess.kill('SIGTERM');
           reject(new Error(`Timeout após ${timeout}ms`));
         }, timeout);
       }
 
       // Enviar inputs se houver
       if (inputs.length > 0) {
-        process.stdin.write(inputs.join('\n'));
-        process.stdin.end();
+        childProcess.stdin.write(inputs.join('\n'));
+        childProcess.stdin.end();
       }
 
       // Capturar stdout
-      process.stdout.on('data', (data) => {
+      childProcess.stdout.on('data', (data) => {
         stdout += data.toString();
       });
 
       // Capturar stderr
-      process.stderr.on('data', (data) => {
+      childProcess.stderr.on('data', (data) => {
         stderr += data.toString();
       });
 
       // Processo terminado
-      process.on('close', (code) => {
+      childProcess.on('close', (code) => {
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
@@ -310,7 +310,7 @@ class ExecutionFeedbackSystem {
       });
 
       // Erro no processo
-      process.on('error', (error) => {
+      childProcess.on('error', (error) => {
         if (timeoutId) {
           clearTimeout(timeoutId);
         }

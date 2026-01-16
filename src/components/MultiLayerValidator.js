@@ -21,6 +21,11 @@
 import { getConfigLoader } from '../utils/ConfigLoader.js';
 import { getLogger } from '../utils/Logger.js';
 import { getErrorHandler } from '../utils/ErrorHandler.js';
+import PredictiveDependencyGuardian from '../guardians/PredictiveDependencyGuardian.js';
+import TemporalRegressionDetector from '../guardians/TemporalRegressionDetector.js';
+import SemanticDriftDetector from '../guardians/SemanticDriftDetector.js';
+import ProactiveContractNegotiator from '../guardians/ProactiveContractNegotiator.js';
+import AdversarialSimulationEngine from '../guardians/AdversarialSimulationEngine.js';
 
 class MultiLayerValidator {
   constructor(config = null, logger = null, errorHandler = null) {
@@ -52,6 +57,12 @@ class MultiLayerValidator {
     // Configurações de validação
     this.strictMode = config.validation?.strictMode !== false;
     this.stopOnFirstError = config.validation?.stopOnFirstError === true;
+    this.guardiansEnabled = config?.proactive?.guardians?.enabled !== false;
+    this.dependencyGuardian = new PredictiveDependencyGuardian(config, this.logger);
+    this.regressionDetector = new TemporalRegressionDetector(config, this.logger);
+    this.driftDetector = new SemanticDriftDetector(config, this.logger);
+    this.contractNegotiator = new ProactiveContractNegotiator(config, this.logger, this.errorHandler);
+    this.adversarialEngine = new AdversarialSimulationEngine(config, this.logger);
   }
 
   /**
@@ -172,6 +183,9 @@ class MultiLayerValidator {
         
         case 'test':
           return this.validateTests(code, language);
+
+        case 'guardians':
+          return this.validateGuardians(code, options);
         
         default:
           result.warnings.push(`Camada de validação desconhecida: ${layer}`);
@@ -491,6 +505,68 @@ class MultiLayerValidator {
       result.warnings.push('Código não parece ter testes');
       result.suggestions.push('Adicionar testes unitários');
       result.score -= 20;
+    }
+
+    return result;
+  }
+
+  /**
+   * Validações proativas via guardiões.
+   * @param {string} code - Código a validar
+   * @param {object} options - Opções
+   * @returns {object} Resultado da validação
+   */
+  validateGuardians(code, options = {}) {
+    const result = {
+      valid: true,
+      errors: [],
+      warnings: [],
+      suggestions: [],
+      score: 100
+    };
+
+    if (!this.guardiansEnabled) {
+      return result;
+    }
+
+    const regression = this.regressionDetector.detect(code);
+    if (regression.detected) {
+      result.valid = false;
+      regression.issues.forEach(issue => {
+        result.errors.push(`Regressão detectada: ${issue.reason || 'anti-padrão conhecido'}`);
+      });
+      result.score -= 30;
+    }
+
+    if (options.previousCode) {
+      const drift = this.driftDetector.detect(options.previousCode, code);
+      if (drift.detected) {
+        result.warnings.push(`Mudança semântica detectada (${drift.changes.length})`);
+        result.score -= 10;
+      }
+    }
+
+    if (options.runDependencyScan) {
+      const report = this.dependencyGuardian.scan();
+      if (report.vulnerabilities.length > 0) {
+        const critical = report.vulnerabilities.filter(v => v.severity === 'high' || v.severity === 'critical');
+        if (critical.length > 0) {
+          result.valid = false;
+          result.errors.push(`Dependências críticas vulneráveis: ${critical.map(v => v.name).join(', ')}`);
+          result.score -= 30;
+        } else {
+          result.warnings.push('Vulnerabilidades detectadas em dependências');
+          result.score -= 10;
+        }
+      }
+    }
+
+    if (options.methodCall) {
+      result.warnings.push('Verificação de contrato requer execução assíncrona');
+    }
+
+    if (options.runAdversarial) {
+      result.warnings.push('Simulação adversarial requer execução assíncrona');
     }
 
     return result;

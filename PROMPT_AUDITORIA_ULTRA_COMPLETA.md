@@ -9,7 +9,7 @@
 **INSTRUÇÃO DE ATIVAÇÃO:**
 
 Você deve:
-1. **ATIVAR IMEDIATAMENTE** o modo IA-SUPER conforme definido no documento `ESTILO_IASUPER.md`
+1. **ATIVAR IMEDIATAMENTE** o modo IA-SUPER conforme definido no documento `estilos/ESTILO_IASUPER.md`
 2. **APLICAR AS EXTENSÕES CRÍTICAS** definidas abaixo para esta tarefa específica
 3. **MANTER AMBOS ATIVOS** durante toda a execução da tarefa
 
@@ -136,19 +136,19 @@ Você deve:
 ## 📋 TAREFA COMPLETA
 
 ### Passo 1: Preparação
-1. Ler o documento `ESTILO_IASUPER.md` completamente
+1. Ler o documento `estilos/ESTILO_IASUPER.md` completamente
 2. Ler o documento `ANALISE_VERIFICACAO_E_MELHORIAS_ULTRA_IA.md` completamente
 3. Contar o número total de perguntas
 4. Criar checklist de todas as perguntas
 
-### Passo 2: Análise do ESTILO_IASUPER.md
-Identificar mentalmente (e documentar) o que precisa ser melhorado no ESTILO_IASUPER.md para:
+### Passo 2: Análise do estilos/ESTILO_IASUPER.md
+Identificar mentalmente (e documentar) o que precisa ser melhorado no estilos/ESTILO_IASUPER.md para:
 - Responder perguntas de verificação de funcionamento
 - Garantir processo de investigação real
 - Evitar suposições
 - Garantir análise completa sem pular itens
 
-Documentar estas melhorias na seção "Melhorias Identificadas no ESTILO_IASUPER.md" do documento de saída.
+Documentar estas melhorias na seção "Melhorias Identificadas no estilos/ESTILO_IASUPER.md" do documento de saída.
 
 ### Passo 3: Investigação do Sistema
 Para CADA pergunta do documento `ANALISE_VERIFICACAO_E_MELHORIAS_ULTRA_IA.md`:
@@ -169,7 +169,7 @@ Criar o documento `RESPOSTAS_AUDITORIA_ULTRA_COMPLETA_[DATA].md` com:
    - Número total de perguntas
    - Resumo executivo
 
-2. **Melhorias Identificadas no ESTILO_IASUPER.md:**
+2. **Melhorias Identificadas no estilos/ESTILO_IASUPER.md:**
    - Lista de melhorias necessárias
    - Justificativa para cada melhoria
    - Como as melhorias foram aplicadas mentalmente
@@ -256,7 +256,7 @@ Antes de entregar a resposta, você DEVE verificar:
 - [ ] O documento detalhado foi criado
 - [ ] A resposta no Cursor foi formulada
 - [ ] A resposta no Cursor é objetiva, breve, completa e didática
-- [ ] Melhorias do ESTILO_IASUPER.md foram documentadas
+- [ ] Melhorias do estilos/ESTILO_IASUPER.md foram documentadas
 
 ---
 
@@ -278,7 +278,7 @@ Ative o modo IASUPER + Extensões Críticas e execute a tarefa completa.
 
 ## 📎 REFERÊNCIAS
 
-- Documento base: `ESTILO_IASUPER.md`
+- Documento base: `estilos/ESTILO_IASUPER.md`
 - Documento de perguntas: `ANALISE_VERIFICACAO_E_MELHORIAS_ULTRA_IA.md`
 - Código fonte: `src/` (todos os arquivos relevantes)
 - Configuração: `config/config.json`

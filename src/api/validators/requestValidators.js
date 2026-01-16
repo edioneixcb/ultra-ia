@@ -50,20 +50,71 @@ export const generateRequestSchema = z.object({
   enableRefinement: z.boolean().default(true)
 });
 
+const codebasePathSchema = z.string()
+  .min(1, 'codebasePath é obrigatório')
+  .max(500, 'codebasePath excede tamanho máximo')
+  .refine(
+    (val) => {
+      // Verificar se não contém caracteres perigosos
+      return !val.includes('..') && !val.includes('~');
+    },
+    { message: 'codebasePath contém caracteres perigosos' }
+  );
+
 /**
  * Schema de validação para POST /api/index
  */
 export const indexRequestSchema = z.object({
-  codebasePath: z.string()
-    .min(1, 'codebasePath é obrigatório')
-    .max(500, 'codebasePath excede tamanho máximo')
-    .refine(
-      (val) => {
-        // Verificar se não contém caracteres perigosos
-        return !val.includes('..') && !val.includes('~');
-      },
-      { message: 'codebasePath contém caracteres perigosos' }
-    )
+  codebasePath: codebasePathSchema.optional(),
+  path: codebasePathSchema.optional(),
+  patterns: z.array(z.string().min(1, 'patterns não pode conter strings vazias'))
+    .optional(),
+  projectId: z.string()
+    .max(100, 'ProjectId excede tamanho máximo')
+    .regex(/^[a-zA-Z0-9_-]*$/, 'ProjectId contém caracteres inválidos')
+    .optional()
+}).superRefine((data, ctx) => {
+  const pathValue = data.codebasePath ?? data.path;
+  if (!pathValue) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'codebasePath é obrigatório',
+      path: ['codebasePath']
+    });
+  }
+}).transform((data) => ({
+  codebasePath: data.codebasePath ?? data.path,
+  patterns: data.patterns,
+  projectId: data.projectId
+}));
+
+/**
+ * Schema de validação para POST /api/validate
+ */
+export const validateRequestSchema = z.object({
+  code: z.string()
+    .min(1, 'Code não pode estar vazio')
+    .max(10240, 'Code excede tamanho máximo de 10KB'),
+  language: z.enum(['javascript', 'python', 'typescript', 'js', 'py', 'ts'], {
+    errorMap: () => ({ message: 'Linguagem não suportada' })
+  }).default('javascript')
+});
+
+/**
+ * Schema de validação para GET /api/search
+ */
+export const searchQuerySchema = z.object({
+  q: z.string()
+    .min(1, 'Query não pode estar vazia')
+    .max(200, 'Query excede tamanho máximo'),
+  limit: z.coerce.number()
+    .int('limit deve ser um número inteiro')
+    .positive('limit deve ser positivo')
+    .optional(),
+  projectId: z.string()
+    .max(100, 'ProjectId excede tamanho máximo')
+    .regex(/^[a-zA-Z0-9_-]*$/, 'ProjectId contém caracteres inválidos')
+    .optional()
 });
 
 /**

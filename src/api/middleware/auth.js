@@ -1,14 +1,16 @@
 /**
- * Middleware de Autenticação
- * 
- * Implementa autenticação básica via API Key:
- * - Validação de API Key no header
- * - Suporte para múltiplas chaves
- * - Autorização baseada em roles (futuro)
+ * Middleware de Autenticação e Autorização
+ *
+ * Implementa autenticação via API Key e JWT:
+ * - Validação de API Key (X-API-Key ou Bearer)
+ * - Validação de JWT (Authorization: Bearer)
+ * - Autorização por permissões/roles
  */
 
 import { getLogger } from '../../utils/Logger.js';
 import { loadConfig } from '../../utils/ConfigLoader.js';
+import { getAuthenticationService } from '../../auth/AuthenticationService.js';
+import { getAuthorizationService } from '../../auth/AuthorizationService.js';
 
 /**
  * Middleware de autenticação via API Key
@@ -17,57 +19,104 @@ export function authenticateApiKey(req, res, next) {
   const config = loadConfig().get();
   const logger = getLogger(config);
   const authConfig = config.api?.auth || {};
+  const authService = getAuthenticationService(config, logger);
+  const authorizationService = getAuthorizationService(config, logger);
 
   // Se autenticação não está habilitada, passar direto
   if (!authConfig.enabled) {
     return next();
   }
 
-  // Obter API Key do header
-  const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
+  const apiKeyHeader = req.headers['x-api-key'];
+  const authHeader = req.headers['authorization'];
+  const bearerToken = typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+    ? authHeader.slice('Bearer '.length).trim()
+    : null;
 
-  if (!apiKey) {
-    logger?.warn('Requisição sem API Key', {
+  let authResult = null;
+  let authMethod = null;
+  let permissions = [];
+  let role = null;
+  let userId = null;
+
+  if (apiKeyHeader) {
+    authResult = authService.validateApiKey(apiKeyHeader);
+    authMethod = 'apiKey';
+    if (authResult.valid) {
+      permissions = authResult.metadata?.permissions || [];
+      req.apiKeyHash = authService.hashApiKey(apiKeyHeader);
+    }
+  }
+
+  if ((!authResult || !authResult.valid) && bearerToken) {
+    if (bearerToken.split('.').length === 3) {
+      authResult = authService.validateJWT(bearerToken);
+      authMethod = 'jwt';
+      if (authResult.valid) {
+        const payload = authResult.payload || {};
+        role = payload.role || null;
+        userId = payload.sub || payload.userId || null;
+        permissions = Array.isArray(payload.permissions)
+          ? payload.permissions
+          : authorizationService.getRolePermissions(role);
+      }
+    } else {
+      authResult = authService.validateApiKey(bearerToken);
+      authMethod = 'apiKey';
+      if (authResult.valid) {
+        permissions = authResult.metadata?.permissions || [];
+        req.apiKeyHash = authService.hashApiKey(bearerToken);
+      }
+    }
+  }
+
+  if (!authResult || !authResult.valid) {
+    const hasAnyCredential = Boolean(apiKeyHeader || bearerToken);
+    const statusCode = hasAnyCredential ? 403 : 401;
+    const message = authResult?.error || 'Credenciais inválidas';
+    logger?.warn('Falha de autenticação', {
       ip: req.ip,
-      path: req.path
+      path: req.path,
+      method: authMethod || 'none',
+      reason: message
     });
-    return res.status(401).json({
+    return res.status(statusCode).json({
       success: false,
-      error: 'API Key requerida',
-      message: 'Forneça uma API Key válida no header X-API-Key ou Authorization'
+      error: hasAnyCredential ? 'Credenciais inválidas' : 'Credenciais requeridas',
+      message
     });
   }
 
-  // Validar API Key
-  const validApiKey = authConfig.apiKey || process.env.API_KEY;
-  const apiKeys = authConfig.apiKeys || []; // Suporte para múltiplas chaves
-
-  // Verificar se a chave é válida
-  const isValid = apiKey === validApiKey || apiKeys.includes(apiKey);
-
-  if (!isValid) {
-    logger?.warn('API Key inválida', {
+  const resource = `${req.method} ${req.baseUrl}${req.path}`;
+  const authz = authorizationService.authorize(permissions, resource);
+  if (!authz.allowed) {
+    logger?.warn('Autorização negada', {
       ip: req.ip,
       path: req.path,
-      providedKey: apiKey.substring(0, 8) + '...'
+      resource,
+      reason: authz.reason
     });
     return res.status(403).json({
       success: false,
-      error: 'API Key inválida',
-      message: 'A API Key fornecida não é válida'
+      error: 'Acesso negado',
+      message: authz.reason
     });
   }
 
-  // Adicionar informações de autenticação ao request
   req.authenticated = true;
-  req.apiKey = apiKey;
+  req.authMethod = authMethod;
+  req.userId = userId;
+  req.userRole = role;
+  req.userPermissions = permissions;
 
   logger?.debug('Autenticação bem-sucedida', {
     ip: req.ip,
-    path: req.path
+    path: req.path,
+    method: authMethod,
+    role
   });
 
-  next();
+  return next();
 }
 
 /**
@@ -95,21 +144,61 @@ export function authorize(roles = []) {
 export function optionalAuth(req, res, next) {
   const config = loadConfig().get();
   const authConfig = config.api?.auth || {};
+  const logger = getLogger(config);
+  const authService = getAuthenticationService(config, logger);
+  const authorizationService = getAuthorizationService(config, logger);
 
   if (!authConfig.enabled) {
     return next();
   }
 
-  const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
-  
-  if (apiKey) {
-    const validApiKey = authConfig.apiKey || process.env.API_KEY;
-    const apiKeys = authConfig.apiKeys || [];
-    
-    if (apiKey === validApiKey || apiKeys.includes(apiKey)) {
-      req.authenticated = true;
-      req.apiKey = apiKey;
+  const apiKeyHeader = req.headers['x-api-key'];
+  const authHeader = req.headers['authorization'];
+  const bearerToken = typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+    ? authHeader.slice('Bearer '.length).trim()
+    : null;
+
+  let authResult = null;
+  let permissions = [];
+  let role = null;
+  let userId = null;
+
+  if (apiKeyHeader) {
+    authResult = authService.validateApiKey(apiKeyHeader);
+    if (authResult.valid) {
+      permissions = authResult.metadata?.permissions || [];
+      req.apiKeyHash = authService.hashApiKey(apiKeyHeader);
+      req.authMethod = 'apiKey';
     }
+  }
+
+  if ((!authResult || !authResult.valid) && bearerToken) {
+    if (bearerToken.split('.').length === 3) {
+      authResult = authService.validateJWT(bearerToken);
+      if (authResult.valid) {
+        const payload = authResult.payload || {};
+        role = payload.role || null;
+        userId = payload.sub || payload.userId || null;
+        permissions = Array.isArray(payload.permissions)
+          ? payload.permissions
+          : authorizationService.getRolePermissions(role);
+        req.authMethod = 'jwt';
+      }
+    } else {
+      authResult = authService.validateApiKey(bearerToken);
+      if (authResult.valid) {
+        permissions = authResult.metadata?.permissions || [];
+        req.apiKeyHash = authService.hashApiKey(bearerToken);
+        req.authMethod = 'apiKey';
+      }
+    }
+  }
+
+  if (authResult && authResult.valid) {
+    req.authenticated = true;
+    req.userId = userId;
+    req.userRole = role;
+    req.userPermissions = permissions;
   }
 
   next();

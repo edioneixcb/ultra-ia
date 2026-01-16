@@ -11,6 +11,11 @@ import { getLogger } from '../utils/Logger.js';
 import { getErrorHandler } from '../utils/ErrorHandler.js';
 import ExecutionPipeline from '../core/ExecutionPipeline.js';
 
+// Infraestrutura Proativa
+import EventBus from '../infrastructure/EventBus.js';
+import PersistentStorage from '../infrastructure/PersistentStorage.js';
+import ConfigWatcher from '../infrastructure/ConfigWatcher.js';
+
 // Componentes Base
 import DynamicKnowledgeBase from '../components/DynamicKnowledgeBase.js';
 import PersistentContextManager from '../components/PersistentContextManager.js';
@@ -74,6 +79,10 @@ import { createTestValidator } from '../systems/fase3/TestValidator.js';
 import { createAccurateDocumentationSystem } from '../systems/fase3/AccurateDocumentationSystem.js';
 import { createMetaValidationSystem } from '../systems/fase3/MetaValidationSystem.js';
 
+// Fase 9 (Multi-plataforma)
+import BrowserAutomation from '../utils/BrowserAutomation.js';
+import EmulatorController from '../utils/EmulatorController.js';
+
 // Inicializar Configuração e Logger
 const configLoader = loadConfig();
 const config = configLoader.get();
@@ -87,6 +96,17 @@ const registry = createComponentRegistry({ logger, errorHandler });
 registry.register('Config', () => config, []);
 registry.register('Logger', () => logger, []);
 registry.register('ErrorHandler', () => errorHandler, []);
+
+// Infraestrutura Proativa
+registry.register('EventBus', (cfg, log) => new EventBus(cfg, log), ['Config', 'Logger']);
+registry.register('PersistentStorage', (cfg, log) => new PersistentStorage(cfg, log), ['Config', 'Logger']);
+registry.register('ConfigWatcher', (cfg, log) => {
+  const watcher = new ConfigWatcher(cfg, log);
+  if (cfg?.proactive?.configWatcher?.enabled !== false) {
+    watcher.start();
+  }
+  return watcher;
+}, ['Config', 'Logger']);
 
 // 2. Registrar Componentes Base
 registry.register('KnowledgeBase', 
@@ -288,6 +308,18 @@ if (enableFase3) {
   logger?.info('Sistemas da FASE 3 registrados com sucesso');
 } else {
   logger?.debug('Integração da FASE 3 desabilitada (enableFase3Integration = false)');
+}
+
+// 9. Sistemas da Fase 9 (Multi-plataforma) - Registro Condicional
+const enableBrowserAutomation = config?.fase9?.browserAutomation?.enabled !== false;
+const enableEmulatorController = config?.fase9?.emulatorController?.enabled !== false;
+
+if (enableBrowserAutomation) {
+  registry.register('BrowserAutomation', (cfg, log, err) => new BrowserAutomation(cfg, log, err), ['Config', 'Logger', 'ErrorHandler']);
+}
+
+if (enableEmulatorController) {
+  registry.register('EmulatorController', (cfg, log, err) => new EmulatorController(cfg, log, err), ['Config', 'Logger', 'ErrorHandler']);
 }
 
 // 10. Configurar Pipeline

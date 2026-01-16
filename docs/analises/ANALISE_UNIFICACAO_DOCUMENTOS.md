@@ -16,35 +16,35 @@
 ## 📚 GRUPO 1: DOCUMENTOS DE ESTILO DE TRABALHO
 
 ### Documento Principal (MANTER)
-- **ESTILO_IASUPER.md** (33KB, 676 linhas)
+- **estilos/ESTILO_IASUPER.md** (33KB, 676 linhas)
   - ✅ Documento consolidado e auto-suficiente
   - ✅ Contém todas as especificações necessárias
   - ✅ Único documento necessário para ativação do estilo
 
-### Documentos para REMOVER (consolidados em ESTILO_IASUPER.md)
+### Documentos para REMOVER (consolidados em estilos/ESTILO_IASUPER.md)
 
-1. **ESTILO_ULTRA.md** (64KB, 2078 linhas)
-   - ❌ Conteúdo consolidado em ESTILO_IASUPER.md
+1. **estilos/ESTILO_ULTRA.md** (64KB, 2078 linhas)
+   - ❌ Conteúdo consolidado em estilos/ESTILO_IASUPER.md
    - ❌ Foco em exemplos práticos que não são essenciais
    - 💾 **Espaço liberado:** 64KB
 
 2. **PROFISSIONAL_ULTRA_ESPECIALIZADO.md** (38KB, ~509 linhas)
-   - ❌ Conhecimentos e habilidades consolidados em ESTILO_IASUPER.md
-   - ❌ Perfil profissional já definido em ESTILO_IASUPER.md
+   - ❌ Conhecimentos e habilidades consolidados em estilos/ESTILO_IASUPER.md
+   - ❌ Perfil profissional já definido em estilos/ESTILO_IASUPER.md
    - 💾 **Espaço liberado:** 38KB
 
 3. **ESPECIFICACOES_COMPLETAS_AGENTE.md** (63KB, 1115 linhas)
-   - ❌ Todas as categorias consolidadas em ESTILO_IASUPER.md
+   - ❌ Todas as categorias consolidadas em estilos/ESTILO_IASUPER.md
    - ❌ Conteúdo duplicado completamente
    - 💾 **Espaço liberado:** 63KB
 
 4. **ESPECIFICACOES_PRINCIPAIS_AGENTE.md** (18KB, 276 linhas)
-   - ❌ Conhecimentos, habilidades, critérios e padrões em ESTILO_IASUPER.md
+   - ❌ Conhecimentos, habilidades, critérios e padrões em estilos/ESTILO_IASUPER.md
    - ❌ Subconjunto do conteúdo completo
    - 💾 **Espaço liberado:** 18KB
 
 5. **ESTRUTURA_ESTILO_TRABALHO_AGENTE.md** (21KB, 457 linhas)
-   - ❌ Estrutura e categorias consolidadas em ESTILO_IASUPER.md
+   - ❌ Estrutura e categorias consolidadas em estilos/ESTILO_IASUPER.md
    - ❌ Documento de planejamento que já foi implementado
    - 💾 **Espaço liberado:** 21KB
 
@@ -217,13 +217,13 @@ Estes documentos parecem ser versões diferentes ou resumos do mesmo conteúdo d
 ### Documentos para REMOVER (Prioridade Alta)
 
 #### Grupo 1: Estilo de Trabalho (5 documentos)
-1. ✅ ESTILO_ULTRA.md
+1. ✅ estilos/ESTILO_ULTRA.md
 2. ✅ PROFISSIONAL_ULTRA_ESPECIALIZADO.md
 3. ✅ ESPECIFICACOES_COMPLETAS_AGENTE.md
 4. ✅ ESPECIFICACOES_PRINCIPAIS_AGENTE.md
 5. ✅ ESTRUTURA_ESTILO_TRABALHO_AGENTE.md
 
-**Motivo:** Todos consolidados em ESTILO_IASUPER.md
+**Motivo:** Todos consolidados em estilos/ESTILO_IASUPER.md
 
 #### Grupo 2: Roadmap (3 documentos)
 6. ✅ ROADMAP_ULTRA_COMPLETO_CAPACITACAO_TOTAL.md
@@ -260,7 +260,7 @@ Estes documentos parecem ser versões diferentes ou resumos do mesmo conteúdo d
 ### Documentos para MANTER
 
 #### Documentos Essenciais
-- ✅ ESTILO_IASUPER.md (único documento de estilo necessário)
+- ✅ estilos/ESTILO_IASUPER.md (único documento de estilo necessário)
 - ✅ ROADMAP_ULTRA_COMPLETO_UNIFICADO.md (roadmap consolidado)
 - ✅ ERRORS_HISTORY.md (documento fonte de erros)
 - ✅ README.md (documentação principal)

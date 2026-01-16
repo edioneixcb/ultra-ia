@@ -33,6 +33,19 @@ class AuthenticationService {
         createdAt: Date.now()
       });
     }
+
+    // Suporte para múltiplas API keys via configuração
+    if (Array.isArray(authConfig.apiKeys)) {
+      authConfig.apiKeys.forEach((key, index) => {
+        if (typeof key === 'string' && key.length > 0) {
+          this.apiKeys.set(key, {
+            name: `config-${index + 1}`,
+            permissions: ['*'],
+            createdAt: Date.now()
+          });
+        }
+      });
+    }
     
     // Sessões ativas
     this.sessions = new Map();

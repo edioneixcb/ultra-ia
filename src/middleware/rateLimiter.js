@@ -47,6 +47,10 @@ class RateLimiter {
         windowMs: this.windowMs,
         max: 20 // Geração é custosa
       },
+      'POST /api/v1/generate': {
+        windowMs: this.windowMs,
+        max: 20
+      },
       'POST /api/index': {
         windowMs: 300000, // 5 minutos
         max: 10 // Indexação é muito custosa
@@ -64,7 +68,8 @@ class RateLimiter {
     return (req, res, next) => {
       const ip = this.getClientIP(req);
       const userId = req.userId || req.apiKeyHash || null;
-      const endpoint = `${req.method} ${req.path}`;
+      const fullPath = `${req.baseUrl || ''}${req.path || ''}`;
+      const endpoint = `${req.method} ${fullPath || req.path}`;
       
       // Verificar limites
       const ipResult = this.checkLimit(this.ipStore, ip, this.limits.ip);

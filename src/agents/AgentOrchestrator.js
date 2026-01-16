@@ -8,6 +8,7 @@
 
 import { getLogger } from '../utils/Logger.js';
 import ConsensusSystem from './ConsensusSystem.js';
+import { getAgentMemoryBridge } from '../memory/AgentMemoryBridge.js';
 // Imports dos agentes serão feitos dinamicamente ou injetados para evitar ciclos
 
 class AgentOrchestrator {
@@ -15,6 +16,8 @@ class AgentOrchestrator {
     this.config = config;
     this.logger = logger || getLogger(config);
     this.consensusSystem = new ConsensusSystem(config, this.logger);
+    this.memoryBridge = getAgentMemoryBridge(config, this.logger);
+    this.memoryLimit = config?.proactive?.memory?.limit || 10;
     
     // Registro de agentes instanciados
     this.agents = new Map();
@@ -119,11 +122,23 @@ class AgentOrchestrator {
     }
 
     try {
+      const memories = this.memoryBridge?.recall(agentName, null, this.memoryLimit) || [];
+      const enrichedContext = memories.length > 0 ? { ...context, agentMemories: memories } : context;
+
       // Race entre execução do agente e timeout
       const result = await Promise.race([
-        agent.analyze(context),
+        agent.analyze(enrichedContext),
         new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout ${agentName}`)), this.timeout))
       ]);
+
+      this.memoryBridge?.storeMemory(agentName, JSON.stringify({
+        approved: result.approved,
+        reason: result.reason,
+        score: result.score
+      }), {
+        type: result.approved ? 'success' : 'error',
+        context: { requestId: context.requestId }
+      });
       
       return result;
     } catch (error) {

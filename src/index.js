@@ -8,6 +8,7 @@ import { loadConfig } from './utils/ConfigLoader.js';
 import { getLogger } from './utils/Logger.js';
 import { getErrorHandler } from './utils/ErrorHandler.js';
 import { getAsyncErrorHandler } from './utils/AsyncErrorHandler.js';
+import { getRuntimeConfigValidator } from './utils/RuntimeConfigValidator.js';
 import { getUltraSystem } from './systems/UltraSystem.js';
 
 // Inicializar sistema
@@ -15,6 +16,19 @@ const configLoader = loadConfig();
 const config = configLoader.get();
 const logger = getLogger(config);
 const errorHandler = getErrorHandler(config, logger);
+const runtimeConfigValidator = getRuntimeConfigValidator(config, logger);
+const runtimeValidation = runtimeConfigValidator.validateFull();
+
+if (!runtimeValidation.valid) {
+  logger?.warn('Configuração inválida em runtime', {
+    errors: runtimeValidation.errors,
+    warnings: runtimeValidation.warnings
+  });
+} else if (runtimeValidation.warnings.length > 0) {
+  logger?.warn('Avisos de configuração em runtime', {
+    warnings: runtimeValidation.warnings
+  });
+}
 
 // Registrar handlers globais de erros assíncronos ANTES de inicializar outros componentes
 const asyncErrorHandler = getAsyncErrorHandler(config, logger, errorHandler);

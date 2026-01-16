@@ -945,7 +945,7 @@ class KnowledgeBaseExporter {
 - `docs/FASE7_FASE8_COMPLETA.md` - Estado atual das Fases 7 e 8
 - `docs/AUDITORIA_COMPLETA_REQUISITOS.md` - Requisitos e lacunas
 - `docs/status/STATUS_IMPLEMENTACAO.md` - Status de implementação
-- `ESTILO_IASUPER.md` - Guia de estilo e padrões
+- `estilos/ESTILO_IASUPER.md` - Guia de estilo e padrões
 
 ---
 

@@ -17,14 +17,18 @@ import { getUltraSystem } from '../systems/UltraSystem.js';
 import { loadConfig } from '../utils/ConfigLoader.js';
 import { getLogger } from '../utils/Logger.js';
 import { getAsyncErrorHandler } from '../utils/AsyncErrorHandler.js';
+import { getRuntimeConfigValidator } from '../utils/RuntimeConfigValidator.js';
 import { authenticateApiKey } from './middleware/auth.js';
 import v1Routes from './v1/routes.js';
+import metricsRouter from './metrics.js';
 import CorrelationId from '../utils/CorrelationId.js';
 import { getMetricsCollector } from '../utils/MetricsCollector.js';
 import { 
   generateRequestSchema, 
   indexRequestSchema, 
   historyParamsSchema,
+  validateRequestSchema,
+  searchQuerySchema,
   validateAndSanitize,
   validate
 } from './validators/requestValidators.js';
@@ -32,6 +36,19 @@ import {
 const config = loadConfig().get();
 const logger = getLogger(config);
 const metricsCollector = getMetricsCollector(config, logger);
+const runtimeConfigValidator = getRuntimeConfigValidator(config, logger);
+const runtimeValidation = runtimeConfigValidator.validateFull();
+
+if (!runtimeValidation.valid) {
+  logger?.warn('Configuração inválida em runtime', {
+    errors: runtimeValidation.errors,
+    warnings: runtimeValidation.warnings
+  });
+} else if (runtimeValidation.warnings.length > 0) {
+  logger?.warn('Avisos de configuração em runtime', {
+    warnings: runtimeValidation.warnings
+  });
+}
 
 // Registrar handlers de erro assíncrono
 const asyncErrorHandler = getAsyncErrorHandler(config, logger);
@@ -82,6 +99,21 @@ app.use((req, res, next) => {
   next();
 });
 
+// Middleware de logging (após finalizar resposta)
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    logger?.info(`${req.method} ${req.path}`, {
+      ip: req.ip,
+      statusCode: res.statusCode,
+      duration: Date.now() - start,
+      userAgent: req.get('user-agent'),
+      correlationId: req.correlationId
+    });
+  });
+  next();
+});
+
 // Aplicar rate limiting geral
 app.use('/api/', generalLimiter);
 
@@ -90,15 +122,7 @@ app.use('/api/', authenticateApiKey);
 
 // Rotas versionadas
 app.use('/api/v1', v1Routes);
-
-// Middleware de logging
-app.use((req, res, next) => {
-  logger?.info(`${req.method} ${req.path}`, {
-    ip: req.ip,
-    userAgent: req.get('user-agent')
-  });
-  next();
-});
+app.use('/api/metrics', metricsRouter);
 
 // Middleware de tratamento de erros
 app.use((err, req, res, next) => {
@@ -177,6 +201,48 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Erro ao gerar código',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/validate
+ * Valida código existente
+ */
+app.post('/api/validate', async (req, res) => {
+  try {
+    const validation = validateAndSanitize(validateRequestSchema, req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Erro de validação',
+        details: validation.errors
+      });
+    }
+
+    const { code, language } = validation.data;
+    const result = await ultraSystem.validateCode(code, { language });
+    const issues = [
+      ...result.errors.map(message => ({ type: 'error', message })),
+      ...result.warnings.map(message => ({ type: 'warning', message }))
+    ];
+
+    res.json({
+      success: true,
+      validation: {
+        valid: result.valid,
+        issues,
+        errorCount: result.errors.length,
+        warningCount: result.warnings.length,
+        score: result.score
+      }
+    });
+  } catch (error) {
+    logger?.error('Erro ao validar código', { error: error.message });
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao validar código',
       message: error.message
     });
   }
@@ -324,6 +390,47 @@ app.post('/api/index', async (req, res) => {
 });
 
 /**
+ * GET /api/search
+ * Busca na knowledge base
+ */
+app.get('/api/search', async (req, res) => {
+  try {
+    const validation = validateAndSanitize(searchQuerySchema, req.query);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Erro de validação',
+        details: validation.errors
+      });
+    }
+
+    const { q, limit } = validation.data;
+    const maxResults = limit ?? 10;
+    const results = await ultraSystem.knowledgeBase.search(q, maxResults);
+    const normalized = results.map(item => ({
+      type: item.type,
+      name: item.name,
+      file: item.file,
+      language: item.language,
+      similarity: item.similarity
+    }));
+
+    res.json({
+      success: true,
+      results: normalized,
+      count: normalized.length
+    });
+  } catch (error) {
+    logger?.error('Erro ao buscar na knowledge base', { error: error.message });
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao buscar na knowledge base',
+      message: error.message
+    });
+  }
+});
+
+/**
  * GET /api/history/:sessionId
  * Obtém histórico de uma sessão
  */
@@ -344,10 +451,12 @@ app.get('/api/history/:sessionId', (req, res) => {
     const executionSystem = ultraSystem.executionSystem;
     const history = executionSystem.getHistory(sessionId);
     const stats = executionSystem.getStats(sessionId);
+    const messages = ultraSystem.contextManager?.getContext(sessionId) || [];
 
     res.json({
       success: true,
       sessionId,
+      messages,
       history,
       stats
     });
@@ -356,19 +465,6 @@ app.get('/api/history/:sessionId', (req, res) => {
       success: false,
       error: error.message
     });
-  }
-});
-
-/**
- * GET /api/metrics
- * Métricas em formato Prometheus
- */
-app.get('/api/metrics', (req, res) => {
-  try {
-    res.set('Content-Type', 'text/plain');
-    res.send(metricsCollector.getPrometheusFormat());
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
   }
 });
 

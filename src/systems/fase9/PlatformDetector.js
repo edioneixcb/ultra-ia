@@ -110,10 +110,10 @@ class PlatformDetector extends BaseSystem {
     }
 
     // Verificar se está em Deno
-    if (typeof Deno !== 'undefined') {
+    if (typeof globalThis.Deno !== 'undefined') {
       return {
         type: 'deno',
-        version: Deno.version?.deno || 'unknown'
+        version: globalThis.Deno.version?.deno || 'unknown'
       };
     }
 

@@ -3,7 +3,7 @@
 **Data de Criação:** 2026-01-14  
 **Versão:** 2.0  
 **Status:** 🔍 INVESTIGAÇÃO FORENSE COMPLETA - PRONTO PARA IMPLEMENTAÇÃO  
-**Protocolo Ativado:** `ESTILO_IASUPER.md`
+**Protocolo Ativado:** `estilos/ESTILO_IASUPER.md`
 
 ---
 
@@ -946,7 +946,7 @@ CREATE TABLE compressed_context (id, session_id, summary, original_count, compre
 ## 📚 REFERÊNCIAS E EVIDÊNCIAS
 
 ### Documentos Consultados
-- `ESTILO_IASUPER.md` - Protocolo ativado
+- `estilos/ESTILO_IASUPER.md` - Protocolo ativado
 - `docs/PLANO_IMPLEMENTACAO_PROXIMOS_PASSOS.md` - Plano anterior
 - `docs/AUDITORIA_COMPLETA_REQUISITOS.md` - Requisitos e lacunas
 - `docs/baseline-fase7-8.md` - Baseline de testes

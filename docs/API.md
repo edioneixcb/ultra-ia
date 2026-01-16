@@ -8,22 +8,20 @@ A API do Ultra-IA fornece endpoints para geração de código assistida por IA, 
 
 ## Autenticação
 
-A API suporta autenticação via API Key (header `X-API-Key`) e JWT (header `Authorization: Bearer <token>`).
+A API suporta autenticação via API Key (header `X-API-Key`). Opcionalmente, JWT (header `Authorization: Bearer <token>`) é aceito quando a assinatura usa o `api.auth.jwtSecret` configurado.
 
 ```bash
 # Usando API Key
 curl -H "X-API-Key: sua-api-key" http://localhost:3000/api/health
 
-# Usando JWT
+# Usando JWT (opcional, se configurado)
 curl -H "Authorization: Bearer seu-jwt-token" http://localhost:3000/api/health
 ```
 
 ## Rate Limiting
 
-- **Por IP:** 100 requests por minuto
-- **Por usuário autenticado:** 1000 requests por minuto
-- **Endpoint /api/generate:** 20 requests por minuto
-- **Endpoint /api/index:** 10 requests por 5 minutos
+- **Por IP (todas as rotas /api):** 100 requests por minuto (configurável)
+- **Endpoint /api/generate:** 10 requests por minuto por `sessionId` (configurável)
 
 Headers de rate limit incluídos nas respostas:
 - `X-RateLimit-Limit`: Limite máximo
@@ -46,10 +44,30 @@ Verifica o status do sistema.
 {
   "status": "healthy",
   "timestamp": "2026-01-14T17:00:00.000Z",
+  "config": {
+    "valid": true,
+    "errors": [],
+    "warnings": []
+  },
+  "ollama": {
+    "available": true,
+    "models": ["deepseek-coder:6.7b", "llama3.1:8b"]
+  },
   "components": {
-    "ollama": "available",
-    "knowledgeBase": "connected",
-    "contextManager": "connected"
+    "knowledgeBase": true,
+    "context": true,
+    "execution": true
+  },
+  "stats": {
+    "knowledgeBase": {
+      "functions": 150,
+      "classes": 30,
+      "files": 50
+    },
+    "execution": {
+      "total": 100,
+      "successRate": 85.5
+    }
   }
 }
 ```
@@ -91,17 +109,29 @@ Gera código com base em um prompt.
 ```json
 {
   "success": true,
-  "requestId": "req-abc123",
-  "sessionId": "session-123",
-  "code": "function factorial(n) {\n  if (n <= 1) return 1;\n  return n * factorial(n - 1);\n}",
-  "language": "javascript",
-  "validation": {
-    "valid": true,
-    "issues": []
+  "requestId": "session-123-1700000000000",
+  "result": {
+    "code": "function factorial(n) { return n <= 1 ? 1 : n * factorial(n - 1); }",
+    "language": "javascript",
+    "validation": {
+      "valid": true,
+      "score": 92
+    },
+    "execution": {
+      "success": true,
+      "stdout": "ok",
+      "matchesExpected": true
+    }
   },
   "iterations": 1,
   "duration": 1234,
-  "timestamp": "2026-01-14T17:00:00.000Z"
+  "error": null,
+  "requirements": {
+    "valid": true,
+    "completeness": 0.8,
+    "errors": [],
+    "warnings": []
+  }
 }
 ```
 
@@ -131,9 +161,12 @@ Valida código existente.
   "success": true,
   "validation": {
     "valid": true,
-    "issues": [],
+    "issues": [
+      { "type": "warning", "message": "Indentação inconsistente detectada" }
+    ],
     "errorCount": 0,
-    "warningCount": 0
+    "warningCount": 1,
+    "score": 90
   }
 }
 ```
@@ -152,23 +185,24 @@ Indexa arquivos de um diretório na Knowledge Base.
 
 ```json
 {
-  "path": "/caminho/para/projeto",
-  "patterns": ["**/*.js", "**/*.ts"],
-  "projectId": "meu-projeto"
+  "codebasePath": "/caminho/para/projeto"
 }
 ```
+
+Campos opcionais aceitos mas não utilizados no momento:
+`path` (alias de `codebasePath`), `patterns`, `projectId`.
 
 **Resposta:**
 
 ```json
 {
   "success": true,
-  "indexed": {
-    "files": 42,
-    "functions": 128,
-    "classes": 23
-  },
-  "duration": 5678
+  "stats": {
+    "filesIndexed": 42,
+    "totalFunctions": 128,
+    "totalClasses": 23,
+    "totalFiles": 42
+  }
 }
 ```
 
@@ -188,7 +222,6 @@ Busca na Knowledge Base.
 |-----------|------|-----------|
 | q | string | Texto de busca |
 | limit | number | Limite de resultados (padrão: 10) |
-| projectId | string | Filtrar por projeto |
 
 **Resposta:**
 
@@ -200,6 +233,7 @@ Busca na Knowledge Base.
       "type": "function",
       "name": "calculateTotal",
       "file": "src/utils/math.js",
+      "language": "javascript",
       "similarity": 0.92
     }
   ],
@@ -234,7 +268,23 @@ Obtém histórico de mensagens de uma sessão.
       "content": "function factorial(n) {...}",
       "timestamp": "2026-01-14T17:00:01.000Z"
     }
-  ]
+  ],
+  "history": [
+    {
+      "success": true,
+      "executionId": "session-123-1700000000000",
+      "language": "javascript",
+      "duration": 1234,
+      "timestamp": "2026-01-14T17:00:01.000Z"
+    }
+  ],
+  "stats": {
+    "total": 10,
+    "successful": 8,
+    "failed": 2,
+    "successRate": 80.0,
+    "averageDuration": 1234.5
+  }
 }
 ```
 
@@ -313,28 +363,29 @@ Todas as respostas de erro seguem o formato:
 {
   "success": false,
   "error": "Descrição do erro",
-  "code": "ERROR_CODE",
-  "timestamp": "2026-01-14T17:00:00.000Z"
+  "message": "Detalhes do erro"
 }
 ```
 
-## WebSocket (Opcional)
+---
 
-Para streaming de respostas em tempo real:
+## Ferramentas MCP (Cursor)
 
-```javascript
-const ws = new WebSocket('ws://localhost:3000/ws');
+Além da API REST, o Ultra-IA expõe ferramentas MCP para uso no Cursor IDE.
 
-ws.onopen = () => {
-  ws.send(JSON.stringify({
-    type: 'generate',
-    prompt: 'Criar função fatorial',
-    sessionId: 'session-123'
-  }));
-};
+### ultra_analyze_impact
 
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  console.log('Chunk:', data.chunk);
-};
-```
+Analisa impacto de mudança em arquivo específico.
+
+### ultra_get_agent_memory
+
+Recupera memórias persistentes de um agente.
+
+### ultra_run_guardians
+
+Executa guardiões preditivos em um código.
+
+### ultra_self_heal
+
+Tenta autocorreção com mutações e sandbox.
+

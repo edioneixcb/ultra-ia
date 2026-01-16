@@ -5,6 +5,7 @@
  */
 
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { getUltraSystem } from '../../systems/UltraSystem.js';
 import { loadConfig } from '../../utils/ConfigLoader.js';
 import { getLogger } from '../../utils/Logger.js';
@@ -21,8 +22,18 @@ const config = loadConfig().get();
 const logger = getLogger(config);
 const ultraSystem = getUltraSystem(config, logger);
 
+const rateLimitConfig = config.api?.rateLimit || {};
+const generateLimiter = rateLimit({
+  windowMs: rateLimitConfig.windowMs || 60000,
+  max: rateLimitConfig.perSession || 10,
+  keyGenerator: (req) => req.body?.sessionId || req.ip,
+  message: 'Limite de gerações atingido para esta sessão, tente novamente mais tarde.',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 // POST /api/v1/generate
-router.post('/generate', async (req, res) => {
+router.post('/generate', generateLimiter, async (req, res) => {
   try {
     const validation = validateAndSanitize(generateRequestSchema, req.body);
     if (!validation.success) {

@@ -1,4 +1,4 @@
-# Documentos Removidos - Consolidação no ESTILO_IASUPER.md
+# Documentos Removidos - Consolidação no estilos/ESTILO_IASUPER.md
 
 **Motivo:** Consolidação completa de todos os documentos relacionados ao perfil do agente em um único documento auto-suficiente.
 
@@ -8,7 +8,7 @@
 
 ### 1. PERFIL_AGENTE_ULTRA_ESPECIALIZADO.md
 **Status:** ✅ Pode ser removido  
-**Motivo:** Todo o conteúdo foi completamente incorporado no `ESTILO_IASUPER.md`  
+**Motivo:** Todo o conteúdo foi completamente incorporado no `estilos/ESTILO_IASUPER.md`  
 **Conteúdo incorporado:**
 - 30 conhecimentos fundamentais
 - 50 conhecimentos ultra-avançados
@@ -24,7 +24,7 @@
 
 ### 2. RESUMO_PERFIL_AGENTE.md
 **Status:** ✅ Pode ser removido  
-**Motivo:** Resumo executivo do perfil do agente que foi completamente incorporado no `ESTILO_IASUPER.md`  
+**Motivo:** Resumo executivo do perfil do agente que foi completamente incorporado no `estilos/ESTILO_IASUPER.md`  
 **Conteúdo incorporado:**
 - Visão geral do perfil
 - Princípios fundamentais
@@ -36,7 +36,7 @@
 
 ### 4. ESTILO_IASUPER_PROMPT.md
 **Status:** ✅ Já removido  
-**Motivo:** Foi unificado com `ESTILO_IASUPER.md`
+**Motivo:** Foi unificado com `estilos/ESTILO_IASUPER.md`
 
 ---
 
@@ -50,7 +50,7 @@
 **Status:** ✅ Manter  
 **Motivo:** Resumo executivo da análise de falhas e melhorias do sistema, não relacionado ao perfil do agente.
 
-### 3. ESTILO_ULTRA.md
+### 3. estilos/ESTILO_ULTRA.md
 **Status:** ⚠️ Verificar  
 **Motivo:** Parece ser um documento diferente com exemplos práticos de operação. Pode ter conteúdo único ou ser uma versão anterior. Recomenda-se revisar antes de remover.
 
@@ -63,12 +63,12 @@
 - RESUMO_PERFIL_AGENTE.md
 - INDICE_DOCUMENTOS_ANALISE.md
 
-**Documento único necessário:** ESTILO_IASUPER.md
+**Documento único necessário:** estilos/ESTILO_IASUPER.md
 
 ---
 
 ## ✅ Próximos Passos
 
-1. Revisar `ESTILO_ULTRA.md` para confirmar se tem conteúdo único
+1. Revisar `estilos/ESTILO_ULTRA.md` para confirmar se tem conteúdo único
 2. Remover os 3 documentos identificados acima
 3. Atualizar qualquer referência a esses documentos em outros arquivos

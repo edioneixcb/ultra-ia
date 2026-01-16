@@ -20,6 +20,7 @@
  * - Tratamento robusto de erros
  */
 
+import { createHash } from 'crypto';
 import { getConfigLoader } from '../utils/ConfigLoader.js';
 import { getLogger } from '../utils/Logger.js';
 import { getErrorHandler } from '../utils/ErrorHandler.js';
@@ -208,10 +209,16 @@ class UltraSystem {
 
     const safePrompt = typeof prompt === 'string' ? prompt : String(prompt ?? '');
 
+    const promptHash = createHash('sha256')
+      .update(safePrompt)
+      .digest('hex')
+      .slice(0, 12);
+
     this.logger?.info('Iniciando processamento de requisição', {
       requestId,
       sessionId,
-      prompt: safePrompt.substring(0, 100) + '...'
+      promptHash,
+      promptLength: safePrompt.length
     });
 
     try {
@@ -425,7 +432,7 @@ class UltraSystem {
                   sessionId,
                   projectId,
                   requirements,
-                  contextUsed: context.length
+                  contextUsed: (context?.persistent?.length || 0) + (context?.knowledgeBase?.length || 0)
                 }
               };
 

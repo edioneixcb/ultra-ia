@@ -12,6 +12,8 @@ Sistema completo de geração de código usando IA offline, com integração nat
 - ✅ **Knowledge Base Dinâmica** - Aprende com seu código
 - ✅ **Context Manager** - Mantém contexto entre sessões
 - ✅ **Prevenção de Alucinações** - RAG e validação cruzada multi-modelo
+- ✅ **Camada Proativa** - Interceptação e análise antes da execução
+- ✅ **Guardiões Preditivos** - Detecção de regressões e riscos
 
 ## 📁 Estrutura do Projeto
 
@@ -20,6 +22,12 @@ sistema-ultra-ia/
 ├── src/
 │   ├── api/              # API REST e interface web
 │   ├── components/       # Componentes principais
+│   ├── cognitive/         # Motor cognitivo e knowledge graph
+│   ├── guardians/         # Guardiões preditivos
+│   ├── healing/           # Self-healing e mutações
+│   ├── infrastructure/    # Infraestrutura proativa
+│   ├── memory/            # Memória persistente de agentes
+│   ├── proactive/         # Interceptação e monitoramento
 │   ├── systems/          # Sistemas de integração
 │   ├── utils/            # Utilitários
 │   └── mcp/              # Servidor MCP para Cursor
@@ -72,6 +80,7 @@ curl -X POST http://localhost:3000/api/generate \
 
 - [COMO_USAR.md](./COMO_USAR.md) - Guia prático completo
 - [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) - Documentação da API
+- [docs/PROACTIVE_LAYER.md](./docs/PROACTIVE_LAYER.md) - Camada proativa e MCP inteligente
 - [docs/guias/GUIA_ACESSO_USUARIO.md](./docs/guias/GUIA_ACESSO_USUARIO.md) - Como acessar e usar
 - [docs/validacoes/VALIDACAO_MCP.md](./docs/validacoes/VALIDACAO_MCP.md) - Validação do servidor MCP
 
