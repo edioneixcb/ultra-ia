@@ -1,0 +1,45 @@
+{
+  "ultraRoot": "/home/edioneixcb/projetos/ultra-ia",
+  "projectsRoot": "/home/edioneixcb/projetos",
+  "cacheDir": "~/.cache/ultra-ia",
+  "logFile": "~/.cache/ultra-ia/sync.log",
+  "lastIndexedFile": "~/.cache/ultra-ia/last-indexed.json",
+  "activeProjectThresholdDays": 7,
+  "debounceMs": 2000,
+  "maxLogSizeMB": 10,
+  "maxLogFiles": 5,
+  "excludePatterns": [
+    "node_modules",
+    ".git",
+    "data",
+    "logs",
+    "dist",
+    "build",
+    ".cache",
+    "coverage",
+    "*.log",
+    "*.tmp",
+    "*.swp"
+  ],
+  "projectIndicators": [
+    "package.json",
+    ".git",
+    "pyproject.toml",
+    "setup.py",
+    "go.mod",
+    "Cargo.toml",
+    "pom.xml",
+    "build.gradle",
+    "composer.json",
+    "Gemfile"
+  ],
+  "retryConfig": {
+    "maxRetries": 3,
+    "baseDelayMs": 1000,
+    "maxDelayMs": 30000
+  },
+  "inotifyEvents": {
+    "ultraChanges": ["close_write", "create", "delete", "move"],
+    "newProjects": ["create", "moved_to"]
+  }
+}

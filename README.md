@@ -14,6 +14,7 @@ Sistema completo de geração de código usando IA offline, com integração nat
 - ✅ **Prevenção de Alucinações** - RAG e validação cruzada multi-modelo
 - ✅ **Camada Proativa** - Interceptação e análise antes da execução
 - ✅ **Guardiões Preditivos** - Detecção de regressões e riscos
+- ✅ **Sincronização Automática** - Monitora mudanças e mantém projetos indexados
 
 ## 📁 Estrutura do Projeto
 
@@ -76,11 +77,35 @@ curl -X POST http://localhost:3000/api/generate \
   -d '{"prompt": "Criar função para validar email", "language": "javascript"}'
 ```
 
+## 🔄 Sincronização Automática
+
+O Ultra-IA inclui um serviço de sincronização automática que:
+
+1. **Monitora o projeto ultra-ia** - Atualiza configuração MCP automaticamente
+2. **Detecta novos projetos** - Indexa automaticamente projetos ativos
+3. **Reindexa projetos ativos** - Mantém Knowledge Base atualizada
+
+### Instalação do Serviço
+
+```bash
+# Instalar e iniciar
+./scripts/install-sync-service.sh
+
+# Ver status
+systemctl --user status ultra-ia-sync
+
+# Ver logs
+journalctl --user -u ultra-ia-sync -f
+```
+
+Para mais detalhes, veja [docs/SYNC_SERVICE.md](./docs/SYNC_SERVICE.md).
+
 ## 📚 Documentação
 
 - [COMO_USAR.md](./COMO_USAR.md) - Guia prático completo
 - [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) - Documentação da API
 - [docs/PROACTIVE_LAYER.md](./docs/PROACTIVE_LAYER.md) - Camada proativa e MCP inteligente
+- [docs/SYNC_SERVICE.md](./docs/SYNC_SERVICE.md) - Sincronização automática de projetos
 - [docs/guias/GUIA_ACESSO_USUARIO.md](./docs/guias/GUIA_ACESSO_USUARIO.md) - Como acessar e usar
 - [docs/validacoes/VALIDACAO_MCP.md](./docs/validacoes/VALIDACAO_MCP.md) - Validação do servidor MCP
 

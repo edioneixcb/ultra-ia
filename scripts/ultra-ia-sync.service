@@ -1,0 +1,55 @@
+# ==============================================================================
+# Ultra-IA Sync Monitor - Systemd User Service
+# ==============================================================================
+#
+# Este arquivo deve ser instalado em:
+#   ~/.config/systemd/user/ultra-ia-sync.service
+#
+# Comandos úteis:
+#   systemctl --user daemon-reload           # Recarregar configurações
+#   systemctl --user enable ultra-ia-sync    # Habilitar início automático
+#   systemctl --user start ultra-ia-sync     # Iniciar serviço
+#   systemctl --user stop ultra-ia-sync      # Parar serviço
+#   systemctl --user status ultra-ia-sync    # Ver status
+#   journalctl --user -u ultra-ia-sync -f    # Ver logs em tempo real
+#
+# ==============================================================================
+
+[Unit]
+Description=Ultra-IA Sync Monitor - Automatic project synchronization and indexing
+Documentation=https://github.com/edioneixcb/ultra-ia
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/home/edioneixcb/projetos/ultra-ia/scripts/ultra-ia-sync.sh
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+TimeoutStartSec=30
+TimeoutStopSec=30
+
+# Ambiente
+Environment=NODE_ENV=production
+Environment=PATH=/home/edioneixcb/.nvm/versions/node/v18.20.8/bin:/usr/local/bin:/usr/bin:/bin
+
+# Limites de recursos
+MemoryMax=256M
+CPUQuota=20%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ultra-ia-sync
+
+# Segurança
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/edioneixcb/.cache/ultra-ia
+ReadWritePaths=/home/edioneixcb/projetos/ultra-ia/data
+ReadWritePaths=/home/edioneixcb/projetos/ultra-ia/logs
+ReadWritePaths=/tmp
+
+[Install]
+WantedBy=default.target
