@@ -56,10 +56,10 @@ code ~/.cursor/mcp.json
     "ultra-system": {
       "command": "node",
       "args": [
-        "/home/edioneixcb/sistema-ultra-ia/src/mcp/ultra-mcp-server.js"
+        "/home/usuario/projetos/ultra-ia/src/mcp/ultra-mcp-server.js"
       ],
       "env": {
-        "ULTRA_CONFIG_PATH": "/home/edioneixcb/sistema-ultra-ia/config/config.json"
+        "ULTRA_CONFIG_PATH": "/home/usuario/projetos/ultra-ia/config/config.json"
       }
     }
   }
@@ -217,11 +217,11 @@ nano ~/.cursor/mcp.json
 
 ```bash
 # 1. Mover projeto
-mv /home/edioneixcb/sistema-ultra-ia /home/edioneixcb/projetos/ultra-ia
+mv /caminho/antigo/ultra-ia /caminho/novo/ultra-ia
 
 # 2. Atualizar configuração MCP
 nano ~/.cursor/mcp.json
-# Atualizar caminhos para: /home/edioneixcb/projetos/ultra-ia
+# Atualizar caminhos para: /caminho/para/seu/projeto/ultra-ia
 
 # 3. Reiniciar Cursor
 ```

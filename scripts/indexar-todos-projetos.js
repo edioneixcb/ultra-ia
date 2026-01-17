@@ -9,32 +9,42 @@
 import { getUltraSystem } from '../src/systems/UltraSystem.js';
 import { loadConfig } from '../src/utils/ConfigLoader.js';
 import { getLogger } from '../src/utils/Logger.js';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const projectRoot = join(__dirname, '..');
 
 const config = loadConfig().get();
 const logger = getLogger(config);
 const ultraSystem = getUltraSystem(config, logger);
 
 // Projetos a serem indexados
+// Caminhos podem ser configurados via variáveis de ambiente:
+// - ULTRA_IA_PROJECT_PATH: caminho do projeto ultra-ia (padrão: projeto atual)
+// - MAILCHAT_PROJECT_PATH: caminho do projeto mailchat-pro
+// - CLIPBOARD_PROJECT_PATH: caminho do projeto clipboard-manager
 const projetos = [
   {
     nome: 'ultra-ia',
-    caminho: '/home/edioneixcb/projetos/ultra-ia/src',
+    caminho: process.env.ULTRA_IA_PROJECT_PATH || join(projectRoot, 'src'),
     descricao: 'Sistema Ultra-IA - Componentes principais',
     linguagens: ['javascript', 'typescript']
   },
   {
     nome: 'mailchat-pro',
-    caminho: '/home/edioneixcb/projetos/mailchat/mailchat',
+    caminho: process.env.MAILCHAT_PROJECT_PATH || '',
     descricao: 'MailChat Pro - App mobile React Native',
     linguagens: ['typescript', 'javascript']
   },
   {
     nome: 'clipboard-manager',
-    caminho: '/home/edioneixcb/projetos/Ferramentas Windows para Linux/wind_+_v_area_de_transferenciaa/windowsV',
+    caminho: process.env.CLIPBOARD_PROJECT_PATH || '',
     descricao: 'Clipboard Manager Ultra - Shell scripts',
     linguagens: ['shell', 'bash']
   }
-];
+].filter(p => p.caminho); // Filtrar projetos sem caminho configurado
 
 async function indexarProjeto(projeto) {
   console.log(`\n📦 Indexando: ${projeto.nome}`);
@@ -152,7 +162,14 @@ async function main() {
   };
   
   const fs = await import('fs');
-  const relatorioPath = '/home/edioneixcb/projetos/ultra-ia/logs/indexacao-projetos.json';
+  const logsPath = config.paths?.logs || join(projectRoot, 'logs');
+  const relatorioPath = join(logsPath, 'indexacao-projetos.json');
+  
+  // Criar diretório de logs se não existir
+  if (!fs.existsSync(logsPath)) {
+    fs.mkdirSync(logsPath, { recursive: true });
+  }
+  
   fs.writeFileSync(relatorioPath, JSON.stringify(relatorio, null, 2));
   console.log(`📄 Relatório salvo em: ${relatorioPath}\n`);
   

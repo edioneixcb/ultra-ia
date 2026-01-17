@@ -7,8 +7,19 @@
 
 import Database from 'better-sqlite3';
 import { join } from 'path';
+import { existsSync } from 'fs';
+import { loadConfig } from '../src/utils/ConfigLoader.js';
 
-const dbPath = '/home/edioneixcb/sistema-ultra-ia/data/knowledge-base/knowledge-base.db';
+const config = loadConfig().get();
+const kbPath = config.paths.knowledgeBase || join(process.cwd(), 'data', 'knowledge-base');
+const dbPath = join(kbPath, 'knowledge-base.db');
+
+if (!existsSync(dbPath)) {
+  console.error(`❌ Banco de dados não encontrado em: ${dbPath}`);
+  console.error(`   Verifique se o caminho está correto ou execute a indexação primeiro.`);
+  process.exit(1);
+}
+
 const db = new Database(dbPath);
 
 console.log('🧠 O que o Ultra-IA Aprendeu?\n');

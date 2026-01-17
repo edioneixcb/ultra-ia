@@ -4,7 +4,7 @@
 
 **Diretório do Projeto:**
 ```
-/home/edioneixcb/sistema-ultra-ia
+/caminho/para/seu/projeto/ultra-ia
 ```
 
 **Tamanho Total:** ~76MB (incluindo node_modules)
@@ -35,7 +35,7 @@ git clone git@github.com:edioneixcb/ultra-ia.git
 ## 📦 Estrutura do Projeto
 
 ```
-/home/edioneixcb/sistema-ultra-ia/
+ultra-ia/
 ├── src/                    # Código fonte
 │   ├── api/               # API REST e interface web
 │   ├── components/        # Componentes principais
@@ -68,7 +68,7 @@ npm install
 ### 2. Ou Continuar no Diretório Atual
 
 ```bash
-cd /home/edioneixcb/sistema-ultra-ia
+cd /caminho/para/seu/projeto/ultra-ia
 git pull origin main  # Se houver atualizações
 npm install           # Se necessário
 ```
@@ -139,7 +139,7 @@ O arquivo de configuração MCP está em:
 
 O servidor MCP está em:
 ```
-/home/edioneixcb/sistema-ultra-ia/src/mcp/ultra-mcp-server.js
+/CAMINHO/COMPLETO/PARA/ultra-ia/src/mcp/ultra-mcp-server.js
 ```
 
 **Após clonar em outro lugar, atualize o caminho no `~/.cursor/mcp.json`:**

@@ -129,6 +129,54 @@ describe('ConfigLoader', () => {
 
       expect(expanded.paths.test).not.toContain('$HOME');
     });
+
+    it('deve expandir ${PROJECT_ROOT}', () => {
+      const config = {
+        paths: {
+          test: '${PROJECT_ROOT}/test/path',
+          test2: '${PROJECT_ROOT}/data/knowledge-base'
+        }
+      };
+
+      const loader = new ConfigLoader();
+      const expanded = loader.expandPaths(config);
+
+      expect(expanded.paths.test).not.toContain('${PROJECT_ROOT}');
+      expect(expanded.paths.test2).not.toContain('${PROJECT_ROOT}');
+      expect(expanded.paths.test).toContain('test/path');
+      expect(expanded.paths.test2).toContain('data/knowledge-base');
+    });
+
+    it('deve expandir ${PROJECT_ROOT} antes de $HOME', () => {
+      const config = {
+        paths: {
+          test: '${PROJECT_ROOT}/$HOME/test'
+        }
+      };
+
+      const loader = new ConfigLoader();
+      const expanded = loader.expandPaths(config);
+
+      // ${PROJECT_ROOT} deve ser expandido primeiro
+      expect(expanded.paths.test).not.toContain('${PROJECT_ROOT}');
+      // $HOME dentro do path expandido também deve ser expandido
+      expect(expanded.paths.test).toContain(process.env.HOME || process.env.USERPROFILE || '');
+    });
+
+    it('deve expandir múltiplas ocorrências de ${PROJECT_ROOT}', () => {
+      const config = {
+        paths: {
+          test: '${PROJECT_ROOT}/a/${PROJECT_ROOT}/b'
+        }
+      };
+
+      const loader = new ConfigLoader();
+      const expanded = loader.expandPaths(config);
+
+      expect(expanded.paths.test).not.toContain('${PROJECT_ROOT}');
+      // Deve ter expandido ambas as ocorrências
+      expect(expanded.paths.test.split('a/').length).toBeGreaterThan(1);
+    });
   });
 
   describe('validate', () => {

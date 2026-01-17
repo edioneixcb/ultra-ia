@@ -27,11 +27,11 @@
   },
   "paths": {
     "home": "$HOME",
-    "systemRoot": "$HOME/sistema-ultra-ia",
-    "knowledgeBase": "$HOME/sistema-ultra-ia/data/knowledge-base",
-    "context": "$HOME/sistema-ultra-ia/data/context",
-    "logs": "$HOME/sistema-ultra-ia/logs",
-    "sandbox": "$HOME/sistema-ultra-ia/sandbox"
+    "systemRoot": "${PROJECT_ROOT}",
+    "knowledgeBase": "${PROJECT_ROOT}/data/knowledge-base",
+    "context": "${PROJECT_ROOT}/data/context",
+    "logs": "${PROJECT_ROOT}/logs",
+    "sandbox": "${PROJECT_ROOT}/sandbox"
   },
   "services": {
     "ollama": {

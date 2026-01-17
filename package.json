@@ -1,5 +1,5 @@
 {
-  "name": "sistema-ultra-ia",
+  "name": "ultra-ia",
   "version": "1.0.0",
   "description": "Sistema Ultra de IA Offline Genérico",
   "main": "src/index.js",

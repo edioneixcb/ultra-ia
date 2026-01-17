@@ -158,7 +158,7 @@
 ## ESTRUTURA CRIADA
 
 ```
-sistema-ultra-ia/
+ultra-ia/
 ├── src/
 │   ├── utils/
 │   │   ├── ConfigLoader.js ✅

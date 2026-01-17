@@ -98,7 +98,7 @@ O **Ultra-IA** é um sistema de geração de código usando IA offline que se in
 ### Passo 1: Instalar Dependências
 
 ```bash
-cd /home/edioneixcb/projetos/ultra-ia
+cd /caminho/para/seu/projeto/ultra-ia
 npm install
 ```
 
@@ -107,7 +107,7 @@ npm install
 #### Opção A: Usar Script Automático (Recomendado)
 
 ```bash
-cd /home/edioneixcb/projetos/ultra-ia
+cd /caminho/para/seu/projeto/ultra-ia
 chmod +x scripts/atualizar-cursor-mcp.sh
 ./scripts/atualizar-cursor-mcp.sh
 ```
@@ -128,10 +128,10 @@ Edite `~/.cursor/mcp.json`:
     "ultra-system": {
       "command": "node",
       "args": [
-        "/home/edioneixcb/projetos/ultra-ia/src/mcp/ultra-mcp-server.js"
+        "/caminho/para/seu/projeto/ultra-ia/src/mcp/ultra-mcp-server.js"
       ],
       "env": {
-        "ULTRA_CONFIG_PATH": "/home/edioneixcb/projetos/ultra-ia/config/config.json"
+        "ULTRA_CONFIG_PATH": "/caminho/para/seu/projeto/ultra-ia/config/config.json"
       }
     }
   }
@@ -144,11 +144,11 @@ Edite `~/.cursor/mcp.json`:
 
 ```bash
 # Verificar se arquivos existem
-ls -la /home/edioneixcb/projetos/ultra-ia/src/mcp/ultra-mcp-server.js
-ls -la /home/edioneixcb/projetos/ultra-ia/config/config.json
+ls -la /caminho/para/seu/projeto/ultra-ia/src/mcp/ultra-mcp-server.js
+ls -la /caminho/para/seu/projeto/ultra-ia/config/config.json
 
 # Testar servidor MCP manualmente
-cd /home/edioneixcb/projetos/ultra-ia
+cd /caminho/para/seu/projeto/ultra-ia
 node src/mcp/ultra-mcp-server.js
 # Deve aparecer: "Sistema Ultra MCP Server conectado ao Cursor"
 ```
@@ -527,7 +527,7 @@ Melhore esta função adicionando tratamento de erros e validação
 **Solução:**
 1. Verificar se arquivo existe:
    ```bash
-   ls -la /home/edioneixcb/projetos/ultra-ia/src/mcp/ultra-mcp-server.js
+   ls -la /caminho/para/seu/projeto/ultra-ia/src/mcp/ultra-mcp-server.js
    ```
 
 2. Verificar `~/.cursor/mcp.json`:
@@ -545,7 +545,7 @@ Melhore esta função adicionando tratamento de erros e validação
 
 **Solução:**
 ```bash
-cd /home/edioneixcb/projetos/ultra-ia
+cd /caminho/para/seu/projeto/ultra-ia
 npm install
 ```
 

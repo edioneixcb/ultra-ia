@@ -7,7 +7,7 @@
 ## 📊 Resultados da Verificação
 
 ### ✅ Banco de Dados
-- **Localização:** `/home/edioneixcb/sistema-ultra-ia/data/knowledge-base/knowledge-base.db`
+- **Localização:** `/caminho/para/ultra-ia/data/knowledge-base/knowledge-base.db`
 - **Status:** ✅ Encontrado e acessível
 - **Tamanho:** ~1.9 MB
 
@@ -100,13 +100,13 @@ Agora você pode usar o sistema em qualquer projeto:
 
 ### Verificar Funcionamento
 ```bash
-cd /home/edioneixcb/projetos/ultra-ia
+cd /caminho/para/seu/projeto/ultra-ia
 node scripts/verificar-funcionamento.js
 ```
 
 ### Reindexar Projetos
 ```bash
-cd /home/edioneixcb/projetos/ultra-ia
+cd /caminho/para/seu/projeto/ultra-ia
 node scripts/indexar-todos-projetos.js
 ```
 

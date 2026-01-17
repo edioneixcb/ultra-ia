@@ -20,8 +20,7 @@ console.log('='.repeat(60));
 
 // 1. Verificar banco de dados
 console.log('\n📊 1. Verificando Banco de Dados...');
-const kbPath = config.paths?.knowledgeBase?.replace('$HOME', process.env.HOME) || 
-               join(process.env.HOME, 'sistema-ultra-ia/data/knowledge-base');
+const kbPath = config.paths?.knowledgeBase || join(process.cwd(), 'data', 'knowledge-base');
 const dbPath = join(kbPath, 'knowledge-base.db');
 
 if (!existsSync(dbPath)) {

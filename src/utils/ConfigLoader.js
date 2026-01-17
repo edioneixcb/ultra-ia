@@ -179,17 +179,28 @@ class ConfigLoader {
 
     const expanded = { ...config };
     const home = process.env.HOME || process.env.USERPROFILE || '~';
+    
+    // Calcular PROJECT_ROOT baseado na localização do ConfigLoader
+    // ConfigLoader está em src/utils/, então projeto raiz é ../../ a partir dele
+    const projectRoot = join(__dirname, '../../');
 
     for (const key in expanded.paths) {
       if (typeof expanded.paths[key] === 'string') {
+        let path = expanded.paths[key];
+        
+        // Expandir ${PROJECT_ROOT} primeiro (antes de $HOME)
+        path = path.replace(/\$\{PROJECT_ROOT\}/g, projectRoot);
+        
         // Expandir ~ para home
-        expanded.paths[key] = expanded.paths[key].replace(/^~/, home);
+        path = path.replace(/^~/, home);
         
         // Expandir $HOME
-        expanded.paths[key] = expanded.paths[key].replace(/\$HOME/g, home);
+        path = path.replace(/\$HOME/g, home);
         
         // Expandir ${HOME}
-        expanded.paths[key] = expanded.paths[key].replace(/\$\{HOME\}/g, home);
+        path = path.replace(/\$\{HOME\}/g, home);
+        
+        expanded.paths[key] = path;
       }
     }
 

@@ -10,7 +10,9 @@ echo "🔍 Verificando Status do Ultra-IA"
 echo "=================================="
 echo ""
 
-PROJECT_PATH="/home/edioneixcb/projetos/ultra-ia"
+# Detectar caminho do projeto automaticamente
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_PATH="$(cd "$SCRIPT_DIR/.." && pwd)"
 MCP_SERVER="$PROJECT_PATH/src/mcp/ultra-mcp-server.js"
 CONFIG_FILE="$PROJECT_PATH/config/config.json"
 CURSOR_MCP_CONFIG="$HOME/.cursor/mcp.json"

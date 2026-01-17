@@ -28,7 +28,7 @@ Todos os 3 projetos foram indexados com sucesso na Knowledge Base do Ultra-IA:
 
 ### 1. ultra-ia ✅
 
-- **Caminho:** `/home/edioneixcb/projetos/ultra-ia/src`
+- **Caminho:** `/caminho/para/seu/projeto/ultra-ia/src`
 - **Arquivos indexados:** 113 arquivos
 - **Funções:** 162 funções
 - **Classes:** 91 classes
@@ -97,7 +97,7 @@ Todos os 3 projetos foram indexados com sucesso na Knowledge Base do Ultra-IA:
 
 ### Banco de Dados da Knowledge Base
 
-**Caminho:** `/home/edioneixcb/sistema-ultra-ia/data/knowledge-base/knowledge-base.db`
+**Caminho:** `/caminho/para/ultra-ia/data/knowledge-base/knowledge-base.db`
 
 **Tamanho:** ~1.9 MB (após indexação)
 
@@ -172,11 +172,11 @@ curl http://localhost:3000/api/stats
 
 Foi criado um script automatizado para facilitar reindexação futura:
 
-**Arquivo:** `/home/edioneixcb/projetos/ultra-ia/scripts/indexar-todos-projetos.js`
+**Arquivo:** `/caminho/para/seu/projeto/ultra-ia/scripts/indexar-todos-projetos.js`
 
 **Uso:**
 ```bash
-cd /home/edioneixcb/projetos/ultra-ia
+cd /caminho/para/seu/projeto/ultra-ia
 node scripts/indexar-todos-projetos.js
 ```
 
@@ -199,7 +199,7 @@ node scripts/indexar-todos-projetos.js
 ### Como reindexar?
 
 ```bash
-cd /home/edioneixcb/projetos/ultra-ia
+cd /caminho/para/seu/projeto/ultra-ia
 node scripts/indexar-todos-projetos.js
 ```
 
@@ -217,7 +217,7 @@ curl -X POST http://localhost:3000/api/index \
 ## 📊 Relatório JSON
 
 Relatório completo salvo em:
-`/home/edioneixcb/projetos/ultra-ia/logs/indexacao-projetos.json`
+`/caminho/para/seu/projeto/ultra-ia/logs/indexacao-projetos.json`
 
 Contém:
 - Data e hora da indexação

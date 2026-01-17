@@ -5,7 +5,7 @@
 ### Passo 1: Iniciar o Servidor
 
 ```bash
-cd /home/edioneixcb/sistema-ultra-ia
+cd /caminho/para/seu/projeto/ultra-ia
 npm run api
 ```
 
@@ -59,7 +59,7 @@ http://localhost:3000
 #### 1. Instalar Dependência MCP
 
 ```bash
-cd /home/edioneixcb/sistema-ultra-ia
+cd /caminho/para/seu/projeto/ultra-ia
 npm install @modelcontextprotocol/sdk
 ```
 
@@ -73,10 +73,10 @@ O arquivo `~/.cursor/mcp.json` já deve conter:
     "ultra-system": {
       "command": "node",
       "args": [
-        "/home/edioneixcb/sistema-ultra-ia/src/mcp/ultra-mcp-server.js"
+        "/caminho/para/seu/projeto/ultra-ia/src/mcp/ultra-mcp-server.js"
       ],
       "env": {
-        "ULTRA_CONFIG_PATH": "/home/edioneixcb/sistema-ultra-ia/config/config.json"
+        "ULTRA_CONFIG_PATH": "/caminho/para/seu/projeto/ultra-ia/config/config.json"
       }
     }
   }
@@ -258,12 +258,12 @@ tail -f logs/system-*.log
 
 1. Verificar se arquivo existe:
    ```bash
-   ls -la /home/edioneixcb/sistema-ultra-ia/src/mcp/ultra-mcp-server.js
+   ls -la /caminho/para/seu/projeto/ultra-ia/src/mcp/ultra-mcp-server.js
    ```
 
 2. Verificar permissões:
    ```bash
-   chmod +x /home/edioneixcb/sistema-ultra-ia/src/mcp/ultra-mcp-server.js
+   chmod +x /caminho/para/seu/projeto/ultra-ia/src/mcp/ultra-mcp-server.js
    ```
 
 3. Verificar logs do Cursor:
@@ -273,7 +273,7 @@ tail -f logs/system-*.log
 ### Erro "Cannot find module"
 
 ```bash
-cd /home/edioneixcb/sistema-ultra-ia
+cd /caminho/para/seu/projeto/ultra-ia
 npm install
 ```
 

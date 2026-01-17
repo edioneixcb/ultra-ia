@@ -7,7 +7,9 @@
 ## Estrutura
 
 - **[ULTRA-IDE-MASTER-SPEC.md](./ULTRA-IDE-MASTER-SPEC.md)** - Documento master completo
+- **[PLANO_DOCUMENTACAO.md](./PLANO_DOCUMENTACAO.md)** - Plano original de documentacao
 - **[GLOSSARIO.md](./GLOSSARIO.md)** - Termos e definicoes
+- **[VALIDATION.md](./VALIDATION.md)** - Checklist de validacao
 - **[contracts/](./contracts/)** - Contratos de interface (TypeScript)
 - **[templates/](./templates/)** - Templates para desenvolvimento futuro
 - **[patterns/](./patterns/)** - Padroes de codigo

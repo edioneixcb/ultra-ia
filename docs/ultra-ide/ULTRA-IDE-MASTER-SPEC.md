@@ -292,7 +292,7 @@ flowchart TB
 
 ### ADRs (Architecture Decision Records)
 
-Ver arquivos em [docs/adrs/](./adrs/):
+Ver arquivos em [adrs/](./adrs/):
 - [ADR-001: React sobre Solid.js](./adrs/ADR-001-react.md)
 - [ADR-002: Monaco sobre CodeMirror 6](./adrs/ADR-002-monaco.md)
 - [ADR-003: Tauri sobre Electron](./adrs/ADR-003-tauri.md)
@@ -306,7 +306,7 @@ Ver arquivos em [docs/adrs/](./adrs/):
 
 ## SECAO 4: CONTRATOS DE INTERFACE
 
-Todas as interfaces estao documentadas em [docs/contracts/](./contracts/) com:
+Todas as interfaces estao documentadas em [contracts/](./contracts/) com:
 - Definicao TypeScript completa
 - JSDoc detalhado
 - Exemplos de uso
@@ -328,7 +328,7 @@ Interfaces principais:
 
 ## SECAO 5: PADROES E ANTI-PADROES
 
-Padroes documentados em [docs/patterns/](./patterns/):
+Padroes documentados em [patterns/](./patterns/):
 - [commands.md](./patterns/commands.md) - Como adicionar comandos
 - [error-handling.md](./patterns/error-handling.md) - Como tratar erros
 - [component-creation.md](./patterns/component-creation.md) - Como criar componentes
@@ -352,7 +352,7 @@ Anti-padroes documentados nos mesmos arquivos:
 
 ## SECAO 6: TEMPLATES
 
-Templates copiaveis em [docs/templates/](./templates/):
+Templates copiaveis em [templates/](./templates/):
 - [component.md](./templates/component.md) - Template de componente UI
 - [adapter.md](./templates/adapter.md) - Template de adapter
 - [plugin.md](./templates/plugin.md) - Template de plugin
@@ -365,7 +365,7 @@ Templates copiaveis em [docs/templates/](./templates/):
 
 ## SECAO 7: GUIAS DE EXTENSIBILIDADE
 
-Guias passo-a-passo em [docs/guides/](./guides/):
+Guias passo-a-passo em [guides/](./guides/):
 - [add-language.md](./guides/add-language.md) - Adicionar suporte a nova linguagem (LSP)
 - [create-plugin.md](./guides/create-plugin.md) - Criar plugin completo do zero
 - [add-ai-provider.md](./guides/add-ai-provider.md) - Adicionar novo provedor de IA
@@ -518,7 +518,7 @@ Guias passo-a-passo em [docs/guides/](./guides/):
 
 ## SECAO 10: TROUBLESHOOTING
 
-Problemas comuns documentados em [docs/troubleshooting/](./troubleshooting/):
+Problemas comuns documentados em [troubleshooting/](./troubleshooting/):
 - [lsp.md](./troubleshooting/lsp.md) - Problemas com LSP
 - [dap.md](./troubleshooting/dap.md) - Problemas com DAP
 - [plugins.md](./troubleshooting/plugins.md) - Problemas com plugins
@@ -629,7 +629,7 @@ Termos e definicoes em [GLOSSARIO.md](./GLOSSARIO.md).
 
 ## VALIDACAO
 
-Este documento foi criado seguindo o plano em `.cursor/plans/documentacao_ultra-ide_81844b6d.plan.md`.
+Este documento foi criado seguindo o plano em [PLANO_DOCUMENTACAO.md](./PLANO_DOCUMENTACAO.md).
 
 Para validar completude:
 - [x] Secao 0: Onboarding criada

@@ -66,14 +66,14 @@ cat ~/.cursor/mcp.json | grep ultra-system -A 5
 # "ultra-system": {
 #   "command": "node",
 #   "args": [
-#     "/home/edioneixcb/projetos/ultra-ia/src/mcp/ultra-mcp-server.js"
+#     "/caminho/para/seu/projeto/ultra-ia/src/mcp/ultra-mcp-server.js"
 #   ],
 ```
 
 **Solução 2: Atualizar configuração**
 
 ```bash
-cd /home/edioneixcb/projetos/ultra-ia
+cd /caminho/para/seu/projeto/ultra-ia
 chmod +x scripts/atualizar-cursor-mcp.sh
 ./scripts/atualizar-cursor-mcp.sh
 ```
@@ -83,7 +83,7 @@ Depois reinicie o Cursor novamente.
 **Solução 3: Testar servidor MCP manualmente**
 
 ```bash
-cd /home/edioneixcb/projetos/ultra-ia
+cd /caminho/para/seu/projeto/ultra-ia
 node src/mcp/ultra-mcp-server.js
 ```
 
@@ -94,7 +94,7 @@ Se aparecer erro, verifique:
 ### Problema: Erro "Cannot find module"
 
 ```bash
-cd /home/edioneixcb/projetos/ultra-ia
+cd /caminho/para/seu/projeto/ultra-ia
 npm install
 ```
 

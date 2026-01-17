@@ -30,8 +30,8 @@
 - **Status**: Configurado corretamente
 - **Arquivo**: `~/.cursor/mcp.json`
 - **Servidor**: `ultra-system`
-- **Caminho**: `/home/edioneixcb/projetos/ultra-ia/src/mcp/ultra-mcp-server.js`
-- **Config Path**: `/home/edioneixcb/projetos/ultra-ia/config/config.json`
+- **Caminho**: `/caminho/para/seu/projeto/ultra-ia/src/mcp/ultra-mcp-server.js`
+- **Config Path**: `/caminho/para/seu/projeto/ultra-ia/config/config.json`
 
 **Configuração encontrada:**
 ```json
@@ -39,10 +39,10 @@
   "ultra-system": {
     "command": "node",
     "args": [
-      "/home/edioneixcb/projetos/ultra-ia/src/mcp/ultra-mcp-server.js"
+      "/caminho/para/seu/projeto/ultra-ia/src/mcp/ultra-mcp-server.js"
     ],
     "env": {
-      "ULTRA_CONFIG_PATH": "/home/edioneixcb/projetos/ultra-ia/config/config.json"
+      "ULTRA_CONFIG_PATH": "/caminho/para/seu/projeto/ultra-ia/config/config.json"
     }
   }
 }

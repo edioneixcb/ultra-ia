@@ -103,7 +103,7 @@ Gere uma função para validar email seguindo os padrões do projeto ultra-ia
 **Solução:**
 1. Verifique se o banco de dados foi atualizado:
    ```bash
-   sqlite3 /home/edioneixcb/sistema-ultra-ia/data/knowledge-base/knowledge-base.db "SELECT COUNT(*) FROM functions;"
+   sqlite3 /caminho/para/ultra-ia/data/knowledge-base/knowledge-base.db "SELECT COUNT(*) FROM functions;"
    ```
    Deve retornar: `573`
 
@@ -116,7 +116,7 @@ Gere uma função para validar email seguindo os padrões do projeto ultra-ia
 1. Verifique configuração em `~/.cursor/mcp.json`
 2. Verifique se o caminho está correto:
    ```json
-   "/home/edioneixcb/projetos/ultra-ia/src/mcp/ultra-mcp-server.js"
+   "/caminho/para/seu/projeto/ultra-ia/src/mcp/ultra-mcp-server.js"
    ```
 3. Reinicie o Cursor
 
@@ -154,7 +154,7 @@ Gere uma função para validar email seguindo os padrões do projeto ultra-ia
 - ✅ Funciona em **qualquer projeto** aberto no Cursor
 - ✅ A Knowledge Base é **compartilhada** entre todos os projetos
 - ✅ Você pode usar em:
-  - `/home/edioneixcb/projetos/ultra-ia`
+  - `/caminho/para/seu/projeto/ultra-ia`
   - `/home/edioneixcb/projetos/mailchat/mailchat`
   - `/home/edioneixcb/projetos/Ferramentas Windows para Linux/...`
   - Qualquer outro projeto

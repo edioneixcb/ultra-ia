@@ -135,23 +135,23 @@ Isso mostra:
 
 ```bash
 # Ver total de funções aprendidas
-sqlite3 /home/edioneixcb/sistema-ultra-ia/data/knowledge-base/knowledge-base.db \
+sqlite3 /caminho/para/ultra-ia/data/knowledge-base/knowledge-base.db \
   "SELECT COUNT(*) as total FROM functions;"
 
 # Ver total de classes aprendidas
-sqlite3 /home/edioneixcb/sistema-ultra-ia/data/knowledge-base/knowledge-base.db \
+sqlite3 /caminho/para/ultra-ia/data/knowledge-base/knowledge-base.db \
   "SELECT COUNT(*) as total FROM classes;"
 
 # Ver exemplos positivos aprendidos
-sqlite3 /home/edioneixcb/sistema-ultra-ia/data/knowledge-base/knowledge-base.db \
+sqlite3 /caminho/para/ultra-ia/data/knowledge-base/knowledge-base.db \
   "SELECT COUNT(*) as total FROM gold_examples;"
 
 # Ver anti-padrões aprendidos
-sqlite3 /home/edioneixcb/sistema-ultra-ia/data/knowledge-base/knowledge-base.db \
+sqlite3 /caminho/para/ultra-ia/data/knowledge-base/knowledge-base.db \
   "SELECT COUNT(*) as total FROM anti_patterns;"
 
 # Ver arquivos indexados por projeto
-sqlite3 /home/edioneixcb/sistema-ultra-ia/data/knowledge-base/knowledge-base.db \
+sqlite3 /caminho/para/ultra-ia/data/knowledge-base/knowledge-base.db \
   "SELECT file_path, COUNT(*) as funcoes FROM functions GROUP BY file_path ORDER BY funcoes DESC LIMIT 10;"
 ```
 
@@ -244,7 +244,7 @@ Execute no terminal:
 cd /home/edioneixcb/projetos/ultra-ia
 node -e "
 import('better-sqlite3').then(({ default: Database }) => {
-  const db = new Database('/home/edioneixcb/sistema-ultra-ia/data/knowledge-base/knowledge-base.db');
+  const db = new Database('/caminho/para/ultra-ia/data/knowledge-base/knowledge-base.db');
   console.log('📊 O que o Ultra-IA aprendeu:\n');
   console.log('Funções:', db.prepare('SELECT COUNT(*) FROM functions').get()['COUNT(*)']);
   console.log('Classes:', db.prepare('SELECT COUNT(*) FROM classes').get()['COUNT(*)']);

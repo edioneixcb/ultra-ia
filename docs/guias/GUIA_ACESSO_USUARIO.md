@@ -6,7 +6,7 @@
 
 1. **Iniciar o servidor da API:**
    ```bash
-   cd /home/edioneixcb/sistema-ultra-ia
+   cd /caminho/para/seu/projeto/ultra-ia
    npm run api
    ```
 
@@ -114,10 +114,10 @@ O servidor MCP será adicionado ao `~/.cursor/mcp.json`:
     "ultra-system": {
       "command": "node",
       "args": [
-        "/home/edioneixcb/sistema-ultra-ia/src/mcp/ultra-mcp-server.js"
+        "/caminho/para/seu/projeto/ultra-ia/src/mcp/ultra-mcp-server.js"
       ],
       "env": {
-        "ULTRA_CONFIG_PATH": "/home/edioneixcb/sistema-ultra-ia/config/config.json"
+        "ULTRA_CONFIG_PATH": "/caminho/para/seu/projeto/ultra-ia/config/config.json"
       }
     }
   }

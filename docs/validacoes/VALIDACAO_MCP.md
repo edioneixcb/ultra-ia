@@ -9,12 +9,12 @@
 
 ### ✅ Teste 1: Verificar Arquivo do Servidor MCP
 - **Status:** PASSOU
-- **Arquivo:** `/home/edioneixcb/sistema-ultra-ia/src/mcp/ultra-mcp-server.js`
+- **Arquivo:** `/caminho/para/seu/projeto/ultra-ia/src/mcp/ultra-mcp-server.js`
 - **Resultado:** Arquivo existe e está acessível
 
 ### ✅ Teste 2: Verificar Arquivo de Configuração
 - **Status:** PASSOU
-- **Arquivo:** `/home/edioneixcb/sistema-ultra-ia/config/config.json`
+- **Arquivo:** `/caminho/para/seu/projeto/ultra-ia/config/config.json`
 - **Resultado:** Config existe e é JSON válido
 
 ### ✅ Teste 3: Verificar Sintaxe do Servidor MCP
@@ -122,13 +122,13 @@ Se após reiniciar o Cursor o servidor MCP não aparecer:
 
 2. **Verificar permissões:**
    ```bash
-   ls -la /home/edioneixcb/sistema-ultra-ia/src/mcp/ultra-mcp-server.js
-   chmod +x /home/edioneixcb/sistema-ultra-ia/src/mcp/ultra-mcp-server.js
+   ls -la /caminho/para/seu/projeto/ultra-ia/src/mcp/ultra-mcp-server.js
+   chmod +x /caminho/para/seu/projeto/ultra-ia/src/mcp/ultra-mcp-server.js
    ```
 
 3. **Testar manualmente:**
    ```bash
-   cd /home/edioneixcb/sistema-ultra-ia
+   cd /caminho/para/seu/projeto/ultra-ia
    node src/mcp/ultra-mcp-server.js
    ```
    Deve aparecer: "Sistema Ultra MCP Server conectado ao Cursor"

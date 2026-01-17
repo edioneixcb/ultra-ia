@@ -18,7 +18,7 @@ Sistema completo de geração de código usando IA offline, com integração nat
 ## 📁 Estrutura do Projeto
 
 ```
-sistema-ultra-ia/
+ultra-ia/
 ├── src/
 │   ├── api/              # API REST e interface web
 │   ├── components/       # Componentes principais

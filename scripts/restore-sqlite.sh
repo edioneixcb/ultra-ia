@@ -12,8 +12,8 @@ fi
 
 resolve_paths() {
   if [[ -f "$CONFIG_PATH" ]]; then
-    node -e "const fs=require('fs');const cfg=JSON.parse(fs.readFileSync(process.env.CONFIG_PATH,'utf8'));const expand=v=>typeof v==='string'?v.replace('\$HOME',process.env.HOME):'';const kb=expand(cfg.paths?.knowledgeBase||'');const ctx=expand(cfg.paths?.context||'');const logs=expand(cfg.paths?.logs||'');console.log([kb,ctx,logs].join('|'));" \
-      CONFIG_PATH="$CONFIG_PATH"
+    node -e "const fs=require('fs');const path=require('path');const cfg=JSON.parse(fs.readFileSync(process.env.CONFIG_PATH,'utf8'));const projectRoot=process.env.PROJECT_ROOT||process.cwd();const expand=v=>{if(typeof v!=='string')return'';let p=v.replace(/\$\{PROJECT_ROOT\}/g,projectRoot);p=p.replace(/^\~/,process.env.HOME||'');p=p.replace(/\$HOME/g,process.env.HOME||'');p=p.replace(/\$\{HOME\}/g,process.env.HOME||'');return p;};const kb=expand(cfg.paths?.knowledgeBase||'');const ctx=expand(cfg.paths?.context||'');const logs=expand(cfg.paths?.logs||'');console.log([kb,ctx,logs].join('|'));" \
+      CONFIG_PATH="$CONFIG_PATH" PROJECT_ROOT="$ROOT_DIR"
   else
     echo "||"
   fi
